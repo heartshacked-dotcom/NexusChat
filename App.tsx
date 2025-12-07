@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
 import { CallModal } from './components/CallModal';
 import { StoryViewer } from './components/StoryViewer';
-import { CURRENT_USER, INITIAL_CHATS, MOCK_USERS, MOCK_STORIES, MOCK_CALL_LOGS } from './constants';
+import { ImageViewer } from './components/ImageViewer';
+import { CURRENT_USER, INITIAL_CHATS, MOCK_USERS, MOCK_STORIES, MOCK_CALL_LOGS, DEFAULT_WALLPAPER } from './constants';
 import { Chat, MessageType, MessageStatus, CallType, User, Story, CallLog, Message } from './types';
 
 type AuthState = 'login' | 'app';
@@ -17,10 +19,13 @@ const App: React.FC = () => {
   const [isMobileListVisible, setIsMobileListVisible] = useState(true);
   const [sidebarTab, setSidebarTab] = useState<'chats' | 'status' | 'calls' | 'settings'>('chats');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [wallpaper, setWallpaper] = useState<string>(DEFAULT_WALLPAPER);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
   
   const [stories, setStories] = useState<Story[]>(MOCK_STORIES);
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const [partnerTyping, setPartnerTyping] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User>(CURRENT_USER);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -37,19 +42,31 @@ const App: React.FC = () => {
 
   const activeChat = chats.find(c => c.id === activeChatId) || null;
 
-  const handleSendMessage = (text: string, type: MessageType, mediaUrl?: string, replyToId?: string) => {
+  const handleSendMessage = (text: string, type: MessageType, mediaUrl?: string, replyToId?: string, pollOptions?: string[]) => {
     if (!activeChatId) return;
+
+    const partner = activeChat?.participants.find(p => p.id !== currentUser.id);
+    if (partner && currentUser.blockedUsers.includes(partner.id)) {
+        alert(`You have blocked ${partner.name}. Unblock to send messages.`);
+        return;
+    }
 
     const newMessage: Message = {
       id: `m-${Date.now()}`,
-      senderId: CURRENT_USER.id,
+      senderId: currentUser.id,
       content: text,
       type,
       mediaUrl,
       timestamp: new Date(),
       status: MessageStatus.SENT,
       reactions: [],
-      replyToId: replyToId
+      replyToId: replyToId,
+      isStarred: false,
+      pollOptions: type === MessageType.POLL && pollOptions ? pollOptions.map((opt, i) => ({
+          id: `opt-${i}`,
+          text: opt,
+          votes: []
+      })) : undefined
     };
 
     setChats(prevChats => prevChats.map(chat => {
@@ -79,42 +96,48 @@ const App: React.FC = () => {
        ));
     }, 1000);
 
-    setTimeout(() => {
-       setChats(prev => prev.map(c => 
-         c.id === activeChatId ? {
-           ...c, messages: c.messages.map(m => m.id === newMessage.id ? { ...m, status: MessageStatus.READ } : m)
-         } : c
-       ));
-    }, 2500);
+    if (currentUser.settings?.privacy.readReceipts) {
+      setTimeout(() => {
+         setChats(prev => prev.map(c => 
+           c.id === activeChatId ? {
+             ...c, messages: c.messages.map(m => m.id === newMessage.id ? { ...m, status: MessageStatus.READ } : m)
+           } : c
+         ));
+      }, 2500);
+    }
 
-    setTimeout(() => {
-        setPartnerTyping(true);
-    }, 2000);
+    // Auto-reply unless it's a poll or self-chat
+    if (activeChat?.participants.length && activeChat.participants.length > 0) {
+        setTimeout(() => {
+            setPartnerTyping(true);
+        }, 2000);
 
-    setTimeout(() => {
-      setPartnerTyping(false);
-      const responseMsg: Message = {
-        id: `m-r-${Date.now()}`,
-        senderId: activeChat?.participants.find(p => p.id !== CURRENT_USER.id)?.id || 'unknown',
-        content: type === MessageType.AUDIO ? "Can't listen right now, in a meeting." : "That's cool! Let me check.",
-        type: MessageType.TEXT,
-        timestamp: new Date(),
-        status: MessageStatus.DELIVERED,
-        reactions: []
-      };
-
-      setChats(prevChats => prevChats.map(chat => {
-        if (chat.id === activeChatId) {
-          return {
-             ...chat,
-             messages: [...chat.messages, responseMsg],
-             lastMessage: responseMsg,
-             unreadCount: chat.id === activeChatId ? 0 : chat.unreadCount + 1
+        setTimeout(() => {
+          setPartnerTyping(false);
+          const responseMsg: Message = {
+            id: `m-r-${Date.now()}`,
+            senderId: activeChat?.participants.find(p => p.id !== currentUser.id)?.id || 'unknown',
+            content: type === MessageType.AUDIO ? "Can't listen right now." : "Interesting!",
+            type: MessageType.TEXT,
+            timestamp: new Date(),
+            status: MessageStatus.DELIVERED,
+            reactions: [],
+            isStarred: false
           };
-        }
-        return chat;
-      }));
-    }, 4500);
+
+          setChats(prevChats => prevChats.map(chat => {
+            if (chat.id === activeChatId) {
+              return {
+                 ...chat,
+                 messages: [...chat.messages, responseMsg],
+                 lastMessage: responseMsg,
+                 unreadCount: chat.id === activeChatId ? 0 : chat.unreadCount + 1
+              };
+            }
+            return chat;
+          }));
+        }, 4500);
+    }
   };
 
   const handleReaction = (chatId: string, messageId: string, emoji: string) => {
@@ -180,14 +203,15 @@ const App: React.FC = () => {
     setTimeout(() => {
         const newMessage: Message = {
             id: `m-fwd-${Date.now()}`,
-            senderId: CURRENT_USER.id,
+            senderId: currentUser.id,
             content: forwardingMessage.content,
             type: forwardingMessage.type,
             mediaUrl: forwardingMessage.mediaUrl,
             timestamp: new Date(),
             status: MessageStatus.SENT,
             reactions: [],
-            forwarded: true
+            forwarded: true,
+            isStarred: false
         };
         setChats(prev => prev.map(c => c.id === chatId ? {
             ...c,
@@ -201,7 +225,7 @@ const App: React.FC = () => {
   const handleAddStory = (type: 'text' | 'image' | 'video', content: string) => {
       const newStory: Story = {
           id: `s-${Date.now()}`,
-          userId: CURRENT_USER.id,
+          userId: currentUser.id,
           type: type as any,
           content: content,
           timestamp: new Date(),
@@ -219,6 +243,8 @@ const App: React.FC = () => {
   };
 
   const handleCreateChat = (userId: string) => {
+    // Check if it's a new Group (mock logic for now, usually would involve selecting multiple)
+    // For this demo, selecting a user just creates/opens a chat
     const existing = chats.find(c => c.participants.some(p => p.id === userId));
     if (existing) {
       handleSelectChat(existing.id);
@@ -234,7 +260,8 @@ const App: React.FC = () => {
       messages: [],
       unreadCount: 0,
       pinned: false,
-      archived: false
+      archived: false,
+      muted: false
     };
     setChats([newChat, ...chats]);
     setActiveChatId(newChat.id);
@@ -243,21 +270,119 @@ const App: React.FC = () => {
   };
 
   const handleStartCall = (userId: string | null, type: CallType) => {
-    const partnerId = userId || (activeChat?.participants.find(p => p.id !== CURRENT_USER.id)?.id);
+    const partnerId = userId || (activeChat?.participants.find(p => p.id !== currentUser.id)?.id);
     if(partnerId) {
+      if (currentUser.blockedUsers.includes(partnerId)) {
+        alert("You cannot call a blocked contact.");
+        return;
+      }
       setActiveCall({ isOpen: true, type, partnerId });
     }
+  };
+
+  const handleClearChats = () => {
+    if (confirm("Are you sure you want to clear all chat history?")) {
+        setChats(prev => prev.map(c => ({
+          ...c,
+          messages: [],
+          lastMessage: undefined,
+          unreadCount: 0
+        })));
+    }
+  };
+
+  const handleToggleStar = (messageId: string) => {
+      if (!activeChatId) return;
+      setChats(prev => prev.map(c => {
+          if (c.id !== activeChatId) return c;
+          return {
+              ...c,
+              messages: c.messages.map(m => m.id === messageId ? { ...m, isStarred: !m.isStarred } : m)
+          };
+      }));
+  };
+
+  const handlePinMessage = (messageId: string) => {
+      if (!activeChatId) return;
+      setChats(prev => prev.map(c => c.id === activeChatId ? { 
+          ...c, 
+          pinnedMessageId: c.pinnedMessageId === messageId ? undefined : messageId 
+      } : c));
+  };
+
+  const handleVotePoll = (messageId: string, optionId: string) => {
+      if (!activeChatId) return;
+      setChats(prev => prev.map(c => {
+          if (c.id !== activeChatId) return c;
+          return {
+              ...c,
+              messages: c.messages.map(m => {
+                  if (m.id !== messageId || !m.pollOptions) return m;
+                  return {
+                      ...m,
+                      pollOptions: m.pollOptions.map(opt => {
+                          const hasVoted = opt.votes.includes(currentUser.id);
+                          if (opt.id === optionId) {
+                              return {
+                                  ...opt,
+                                  votes: hasVoted 
+                                    ? opt.votes.filter(id => id !== currentUser.id)
+                                    : [...opt.votes, currentUser.id]
+                              };
+                          }
+                          return opt;
+                      })
+                  };
+              })
+          };
+      }));
+  };
+
+  const handleToggleMute = () => {
+      if (!activeChatId) return;
+      setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, muted: !c.muted } : c));
+  };
+
+  const handleBlockUser = (userId: string) => {
+      if (confirm("Are you sure you want to block this user?")) {
+        setCurrentUser(prev => ({
+            ...prev,
+            blockedUsers: [...prev.blockedUsers, userId]
+        }));
+      }
+  };
+
+  const handleUnblockUser = (userId: string) => {
+      setCurrentUser(prev => ({
+          ...prev,
+          blockedUsers: prev.blockedUsers.filter(id => id !== userId)
+      }));
+  };
+
+  const handleReportUser = (userId: string) => {
+      alert("User reported to support.");
+  };
+
+  const handleToggleReadReceipts = () => {
+      setCurrentUser(prev => ({
+          ...prev,
+          settings: {
+              ...prev.settings!,
+              privacy: {
+                  ...prev.settings!.privacy,
+                  readReceipts: !prev.settings!.privacy.readReceipts
+              }
+          }
+      }));
   };
 
   if (authState === 'login') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-nexus-50 to-blue-100 dark:from-dark-bg dark:to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Abstract Background Shapes */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
            <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-nexus-300/30 rounded-full blur-[100px] animate-pulse"></div>
            <div className="absolute bottom-[10%] right-[10%] w-[40%] h-[40%] bg-blue-300/30 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
-
         <div className="bg-white/80 dark:bg-dark-panel/80 backdrop-blur-xl p-8 md:p-12 rounded-3xl shadow-2xl w-full max-w-md transition-all border border-white/50 dark:border-gray-700/50 relative z-10 animate-pop-in">
           <div className="text-center mb-10">
             <div className="w-20 h-20 bg-gradient-to-tr from-nexus-400 to-nexus-600 rounded-3xl rotate-3 mx-auto mb-6 flex items-center justify-center shadow-lg shadow-nexus-500/40">
@@ -287,15 +412,16 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-dark-bg font-sans transition-colors duration-300">
-      <div className={`${isMobileListVisible ? 'block' : 'hidden'} md:block h-full z-20 w-full md:w-auto`}>
+      <div className={`${isMobileListVisible ? 'block' : 'hidden'} md:block h-full z-20 w-full md:w-[400px] border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-panel flex-shrink-0`}>
         <Sidebar 
-          currentUser={CURRENT_USER}
+          currentUser={currentUser}
           chats={chats}
           stories={stories}
           callLogs={MOCK_CALL_LOGS}
           activeChatId={activeChatId}
           activeTab={sidebarTab}
           currentTheme={theme}
+          currentWallpaper={wallpaper}
           onTabChange={setSidebarTab}
           onSelectChat={handleSelectChat}
           users={MOCK_USERS}
@@ -303,15 +429,20 @@ const App: React.FC = () => {
           onViewStory={setViewingStoryId}
           onStartCall={(userId, type) => handleStartCall(userId, type)}
           onToggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+          onWallpaperChange={setWallpaper}
+          onClearChats={handleClearChats}
           onAddStory={handleAddStory}
+          onToggleReadReceipts={handleToggleReadReceipts}
+          onUnblockUser={handleUnblockUser}
         />
       </div>
 
-      <div className={`flex-1 flex flex-col h-full relative ${!isMobileListVisible ? 'block' : 'hidden md:flex'}`}>
+      <div className={`flex-1 flex flex-col h-full relative overflow-hidden ${!isMobileListVisible ? 'block' : 'hidden md:flex'}`}>
         <ChatWindow 
           chat={activeChat}
-          currentUser={CURRENT_USER}
+          currentUser={currentUser}
           partnerTyping={partnerTyping}
+          wallpaper={wallpaper}
           onSendMessage={handleSendMessage}
           onBack={() => setIsMobileListVisible(true)}
           onStartCall={(type) => handleStartCall(null, type)}
@@ -319,6 +450,13 @@ const App: React.FC = () => {
           onEdit={(msgId, newContent) => activeChatId && handleEditMessage(activeChatId, msgId, newContent)}
           onDelete={(msgId) => activeChatId && handleDeleteMessage(activeChatId, msgId)}
           onForward={(msg) => setForwardingMessage(msg)}
+          onStar={handleToggleStar}
+          onPin={handlePinMessage}
+          onMute={handleToggleMute}
+          onBlock={handleBlockUser}
+          onReport={handleReportUser}
+          onViewImage={setViewingImage}
+          onVotePoll={handleVotePoll}
         />
       </div>
 
@@ -340,6 +478,13 @@ const App: React.FC = () => {
         />
       )}
 
+      {viewingImage && (
+        <ImageViewer 
+          src={viewingImage} 
+          onClose={() => setViewingImage(null)} 
+        />
+      )}
+
       {forwardingMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-white dark:bg-dark-panel rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh] border border-gray-200 dark:border-gray-700">
@@ -351,7 +496,7 @@ const App: React.FC = () => {
                 </div>
                 <div className="overflow-y-auto flex-1 p-2">
                     {chats.map(chat => {
-                        const partner = chat.participants.find(p => p.id !== CURRENT_USER.id) || chat.participants[0];
+                        const partner = chat.participants.find(p => p.id !== currentUser.id) || chat.participants[0];
                         return (
                             <button 
                                 key={chat.id}

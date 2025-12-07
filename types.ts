@@ -7,7 +7,8 @@ export enum MessageType {
   DOCUMENT = 'document',
   LOCATION = 'location',
   CONTACT = 'contact',
-  SYSTEM = 'system'
+  SYSTEM = 'system',
+  POLL = 'poll'
 }
 
 export enum MessageStatus {
@@ -41,6 +42,7 @@ export interface User {
   lastSeen: Date;
   bio?: string;
   phoneNumber?: string;
+  blockedUsers: string[]; // List of blocked User IDs
   settings?: UserSettings; // Optional for other users, required for current user
 }
 
@@ -50,10 +52,16 @@ export interface Reaction {
   userReacted: boolean;
 }
 
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: string[]; // List of User IDs who voted
+}
+
 export interface Message {
   id: string;
   senderId: string;
-  content: string; // Text content or File Name
+  content: string; // Text content, File Name, or Poll Question
   type: MessageType;
   timestamp: Date;
   status: MessageStatus;
@@ -65,6 +73,8 @@ export interface Message {
   forwarded?: boolean;
   isEdited?: boolean;
   isDeleted?: boolean;
+  isStarred?: boolean;
+  pollOptions?: PollOption[]; // New field for polls
 }
 
 export interface Chat {
@@ -76,8 +86,10 @@ export interface Chat {
   lastMessage?: Message;
   pinned: boolean;
   archived: boolean;
+  muted?: boolean;
   muteUntil?: Date | null;
   wallpaper?: string;
+  pinnedMessageId?: string; // New field
 }
 
 export interface Story {
