@@ -1,7 +1,16 @@
 
 import { User, Chat, MessageType, MessageStatus, Story, CallLog, CallType, CallStatus } from './types';
 
-export const DEFAULT_WALLPAPER = "https://i.pinimg.com/originals/97/c0/07/97c00759d90d786d9b6096d274ad3e07.png";
+export const DEFAULT_WALLPAPER = "https://images.unsplash.com/photo-1554034483-04fda0d3507b?q=80&w=2070&auto=format&fit=crop";
+
+export const WALLPAPERS = [
+  DEFAULT_WALLPAPER,
+  "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029&auto=format&fit=crop", // Dark Gradient
+  "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop", // Light Gradient
+  "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2070&auto=format&fit=crop", // Nature
+  "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop", // Space
+  "https://www.transparenttextures.com/patterns/cubes.png" // Pattern (requires bg color)
+];
 
 export const CURRENT_USER: User = {
   id: 'me',
@@ -12,6 +21,7 @@ export const CURRENT_USER: User = {
   lastSeen: new Date(),
   bio: 'Building the future 🚀',
   phoneNumber: '+1 555 0123',
+  blockedUsers: [],
   settings: {
     privacy: { lastSeen: 'everyone', profilePhoto: 'everyone', readReceipts: true },
     notifications: { sound: true, vibration: true, preview: true },
@@ -29,7 +39,8 @@ export const MOCK_USERS: User[] = [
     status: 'online',
     lastSeen: new Date(),
     bio: 'Pixel perfectionist 🎨',
-    phoneNumber: '+1 555 0124'
+    phoneNumber: '+1 555 0124',
+    blockedUsers: []
   },
   {
     id: 'u2',
@@ -39,7 +50,8 @@ export const MOCK_USERS: User[] = [
     status: 'offline',
     lastSeen: new Date(Date.now() - 1000 * 60 * 15),
     bio: 'Meetings, meetings, meetings 📅',
-    phoneNumber: '+1 555 0125'
+    phoneNumber: '+1 555 0125',
+    blockedUsers: []
   },
   {
     id: 'u3',
@@ -49,7 +61,8 @@ export const MOCK_USERS: User[] = [
     status: 'busy',
     lastSeen: new Date(Date.now() - 1000 * 60 * 60),
     bio: 'Coding away... 💻',
-    phoneNumber: '+1 555 0126'
+    phoneNumber: '+1 555 0126',
+    blockedUsers: []
   }
 ];
 
@@ -112,6 +125,8 @@ export const INITIAL_CHATS: Chat[] = [
     unreadCount: 2,
     pinned: true,
     archived: false,
+    muted: false,
+    pinnedMessageId: 'm3',
     messages: [
       {
         id: 'm1',
@@ -120,7 +135,8 @@ export const INITIAL_CHATS: Chat[] = [
         type: MessageType.TEXT,
         timestamp: new Date(Date.now() - 1000 * 60 * 60),
         status: MessageStatus.READ,
-        reactions: []
+        reactions: [],
+        isStarred: false
       },
       {
         id: 'm2',
@@ -129,7 +145,8 @@ export const INITIAL_CHATS: Chat[] = [
         type: MessageType.TEXT,
         timestamp: new Date(Date.now() - 1000 * 60 * 30),
         status: MessageStatus.READ,
-        reactions: []
+        reactions: [],
+        isStarred: false
       },
       {
         id: 'm3',
@@ -139,7 +156,8 @@ export const INITIAL_CHATS: Chat[] = [
         mediaUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
         timestamp: new Date(Date.now() - 1000 * 60 * 5),
         status: MessageStatus.DELIVERED,
-        reactions: [{ emoji: '👍', count: 1, userReacted: false }]
+        reactions: [{ emoji: '👍', count: 1, userReacted: false }, { emoji: '🔥', count: 1, userReacted: false }],
+        isStarred: true
       },
       {
         id: 'm4',
@@ -148,7 +166,23 @@ export const INITIAL_CHATS: Chat[] = [
         type: MessageType.TEXT,
         timestamp: new Date(Date.now() - 1000 * 60 * 2),
         status: MessageStatus.DELIVERED,
-        reactions: []
+        reactions: [],
+        isStarred: false
+      },
+      {
+        id: 'm5',
+        senderId: 'me',
+        content: 'Team Lunch Spot?',
+        type: MessageType.POLL,
+        pollOptions: [
+          { id: 'opt1', text: 'Sushi Place', votes: ['u1'] },
+          { id: 'opt2', text: 'Burger Joint', votes: [] },
+          { id: 'opt3', text: 'Salad Bar', votes: [] }
+        ],
+        timestamp: new Date(Date.now() - 1000 * 30),
+        status: MessageStatus.SENT,
+        reactions: [],
+        isStarred: false
       }
     ]
   },
@@ -159,6 +193,7 @@ export const INITIAL_CHATS: Chat[] = [
     unreadCount: 0,
     pinned: false,
     archived: false,
+    muted: true,
     messages: [
       {
         id: 'm10',
@@ -167,7 +202,8 @@ export const INITIAL_CHATS: Chat[] = [
         type: MessageType.TEXT,
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
         status: MessageStatus.READ,
-        reactions: []
+        reactions: [],
+        isStarred: false
       },
       {
         id: 'm11',
@@ -177,7 +213,8 @@ export const INITIAL_CHATS: Chat[] = [
         mediaUrl: 'mock_audio.mp3', // Placeholder
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1.9),
         status: MessageStatus.READ,
-        reactions: []
+        reactions: [],
+        isStarred: false
       }
     ]
   }
