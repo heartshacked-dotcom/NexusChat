@@ -696,24 +696,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         )}
 
         {/* Input Area */}
-        <div className="shrink-0 p-4 bg-transparent z-10">
+        <div className="shrink-0 p-2 md:p-4 bg-transparent z-10">
           {isBlocked ? (
              <div className="max-w-4xl mx-auto bg-red-50 dark:bg-red-900/20 p-4 rounded-xl text-center shadow-sm border border-red-100 dark:border-red-900/30 transition-all">
                 <span className="text-red-500 font-semibold mr-2">You have blocked this contact.</span>
                 <button onClick={() => onBlock(partner.id)} className="px-3 py-1 bg-white dark:bg-red-800 text-red-500 dark:text-red-100 text-xs font-bold rounded-full border border-red-200 dark:border-red-700 shadow-sm hover:bg-red-50 dark:hover:bg-red-700 transition">Unblock</button>
              </div>
           ) : (
-             <div className="max-w-4xl mx-auto flex items-end space-x-2 bg-white dark:bg-dark-panel p-2 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 transition-colors">
+             <div className="max-w-4xl mx-auto flex items-center space-x-2 bg-white dark:bg-dark-panel p-2 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 transition-colors">
                 <button onClick={() => setShowAttachments(!showAttachments)} className={`p-3 transition rounded-full flex-shrink-0 ${showAttachments ? 'bg-gray-100 dark:bg-gray-700 rotate-45 text-nexus-600' : 'text-gray-500 dark:text-gray-400 hover:text-nexus-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                 </button>
                 <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileUpload}/>
-                <div className="flex-1 py-3 flex items-center relative">
-                   <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-gray-400 hover:text-yellow-500 transition mr-2">
+                <div className="flex-1 py-2 flex items-center relative min-w-0">
+                   <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-gray-400 hover:text-yellow-500 transition mr-2 flex-shrink-0">
                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                    </button>
-                  <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Message..." className="flex-1 bg-transparent text-gray-800 dark:text-gray-100 focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 max-h-24"/>
-                  <button onClick={triggerSmartReply} disabled={loadingAI} className={`ml-2 p-1.5 rounded-full hover:bg-nexus-50 dark:hover:bg-gray-700 text-nexus-500 dark:text-nexus-400 transition ${loadingAI ? 'animate-pulse' : ''}`} title="AI Suggest">
+                  <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={handleKeyPress} placeholder="Message..." className="flex-1 bg-transparent text-gray-800 dark:text-gray-100 focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 max-h-24 min-w-0"/>
+                  <button onClick={triggerSmartReply} disabled={loadingAI} className={`ml-2 p-1.5 rounded-full hover:bg-nexus-50 dark:hover:bg-gray-700 text-nexus-500 dark:text-nexus-400 transition flex-shrink-0 ${loadingAI ? 'animate-pulse' : ''}`} title="AI Suggest">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                   </button>
                 </div>
