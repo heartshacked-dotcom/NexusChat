@@ -323,9 +323,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     <div className="flex h-full bg-gray-100 dark:bg-dark-bg transition-colors relative overflow-hidden">
         <div className="flex-1 flex flex-col h-full min-w-0 relative">
         
-        {/* Header */}
-        <div className="shrink-0 h-16 sm:h-20 flex flex-col z-30 transition-all relative">
-            <div className="flex items-center justify-between px-4 sm:px-6 h-full bg-white/80 dark:bg-dark-panel/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 shadow-sm relative z-20">
+        {/* Header - Fixed container that grows with content */}
+        <div className="shrink-0 flex flex-col z-30 transition-all relative bg-white/80 dark:bg-dark-panel/80 backdrop-blur-md shadow-sm">
+            <div className="flex items-center justify-between px-4 sm:px-6 h-16 sm:h-20 border-b border-gray-200/50 dark:border-gray-700/50 relative z-20">
                 <div className={`flex items-center justify-between w-full transition-opacity duration-200 ${showSearch ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
                         <div className="flex items-center cursor-pointer flex-1 min-w-0" onClick={() => setShowContactInfo(true)}>
                             <button onClick={(e) => { e.stopPropagation(); onBack(); }} className="md:hidden mr-2 text-gray-500 dark:text-gray-400 hover:text-nexus-600">
@@ -387,7 +387,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 )}
             </div>
             {pinnedMessage && (
-                <div onClick={() => document.getElementById(`msg-${pinnedMessage.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur text-xs flex items-center justify-between px-4 py-2 cursor-pointer border-b border-gray-200 dark:border-gray-700 shadow-sm animate-fade-in z-10">
+                <div onClick={() => document.getElementById(`msg-${pinnedMessage.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} className="bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur text-xs flex items-center justify-between px-4 py-2 cursor-pointer border-b border-gray-200 dark:border-gray-700 shadow-sm animate-fade-in z-10 relative">
                     <div className="flex items-center space-x-2 truncate">
                          <svg className="w-3.5 h-3.5 text-nexus-500 transform rotate-45" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/></svg>
                          <span className="font-bold text-nexus-600 dark:text-nexus-400">Pinned:</span>
