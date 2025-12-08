@@ -98,12 +98,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   useEffect(() => {
-    const handleClickOutside = () => {
-      setShowReactionMenuId(null);
+    const handleClickOutside = (e: MouseEvent) => {
+        // Close reaction menu if clicking anywhere else
+        if (showReactionMenuId) {
+            setShowReactionMenuId(null);
+        }
     };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
+  }, [showReactionMenuId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -117,6 +120,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     setShowStarred(false);
     setShowEmojiPicker(false);
     setShowPollCreator(false);
+    setShowReactionMenuId(null);
   }, [chat?.id]);
 
   useEffect(() => {
@@ -319,7 +323,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     <div className="flex h-full bg-gray-100 dark:bg-dark-bg transition-colors relative overflow-hidden">
         <div className="flex-1 flex flex-col h-full min-w-0 relative">
         
-        {/* Header - Fixed Height */}
+        {/* Header */}
         <div className="shrink-0 h-16 sm:h-20 flex flex-col z-30 transition-all relative">
             <div className="flex items-center justify-between px-4 sm:px-6 h-full bg-white/80 dark:bg-dark-panel/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50 shadow-sm relative z-20">
                 <div className={`flex items-center justify-between w-full transition-opacity duration-200 ${showSearch ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
@@ -394,7 +398,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             )}
         </div>
 
-        {/* Messages Area - Flex 1 to fill space and scroll internally */}
+        {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 z-0 bg-cover bg-center relative scrollbar-hide" style={{ backgroundImage: `url(${wallpaper})` }}>
           <div className="absolute inset-0 bg-white/90 dark:bg-gray-900/95 pointer-events-none z-0"></div>
           
@@ -544,8 +548,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                            </div>
                         )}
 
+                        {/* Reaction Menu: Increased Z-Index to stay on top */}
                         {!isDeleted && showMenu && !isBlocked && (
-                          <div className={`absolute bottom-full mb-2 ${isMe ? 'right-0' : 'left-0'} z-50 bg-white dark:bg-gray-800 rounded-full shadow-glass border border-gray-200 dark:border-gray-600 p-1.5 flex items-center space-x-1 animate-pop-in origin-bottom`}>
+                          <div className={`absolute bottom-full mb-2 ${isMe ? 'right-0' : 'left-0'} z-[100] bg-white dark:bg-gray-800 rounded-full shadow-glass border border-gray-200 dark:border-gray-600 p-1.5 flex items-center space-x-1 animate-pop-in origin-bottom`}>
                             {REACTION_EMOJIS.map(emoji => (
                                <button key={emoji} onClick={(e) => { e.stopPropagation(); onReact(msg.id, emoji); setShowReactionMenuId(null); }} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition hover:scale-125 text-xl leading-none">
                                  {emoji}
@@ -556,15 +561,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                       </div>
 
                       {/* QUICK ACTIONS TOOLBAR */}
-                      {!isDeleted && !isBlocked && (
+                      {/* Hide this when Reaction Menu (showMenu) is active to prevent overlap */}
+                      {!isDeleted && !isBlocked && !showMenu && (
                           <div className={`
                               absolute -top-12 z-40 flex items-center bg-white dark:bg-gray-800 rounded-full shadow-xl border border-gray-100 dark:border-gray-700 p-1 transition-all duration-200 animate-pop-in
                               ${isMe ? 'right-0' : 'left-0'}
-                              ${isHovered || isSelected || showMenu ? 'opacity-100 visible' : 'opacity-0 invisible'}
+                              ${isHovered || isSelected ? 'opacity-100 visible' : 'opacity-0 invisible'}
                               max-w-[280px] sm:max-w-none overflow-x-auto scrollbar-hide
                           `}>
                               <div className="flex items-center space-x-1 min-w-max px-1">
-                                <button onClick={(e) => { e.stopPropagation(); setShowReactionMenuId(showMenu ? null : msg.id); }} className="p-2 rounded-full text-gray-500 dark:text-gray-300 hover:text-nexus-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition" title="React">
+                                <button onClick={(e) => { e.stopPropagation(); setShowReactionMenuId(msg.id); }} className="p-2 rounded-full text-gray-500 dark:text-gray-300 hover:text-nexus-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition" title="React">
                                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 </button>
                                 <button onClick={() => setReplyingTo(msg)} className="p-2 rounded-full text-gray-500 dark:text-gray-300 hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition" title="Reply">
@@ -660,7 +666,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
                   {emojiTab === 'emoji' ? (
                      <div className="grid grid-cols-6 gap-2">
-                        {QUICK_EMOJIS.concat(["🥰","😊","🥳","😡","🤯","😱","🥶","😴","🙌","👏","🤝","💪","👀","🧠","💄","💍","🙈","🙉","🙊","👻","👽","🤖","💩"]).map(emoji => (
+                        {QUICK_EMOJIS.concat(["🥰","😊","🥳","😡","🤯","😱","🥶","😴","🙌","👏","🤝","💪","👀","🧠","💄","💍","🙉","🙊","👻","👽","🤖","💩"]).map(emoji => (
                             <button key={emoji} onClick={() => setInputValue(prev => prev + emoji)} className="text-2xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1">
                                 {emoji}
                             </button>
@@ -689,12 +695,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           </div>
         )}
 
-        {/* Input Area - Fixed Height */}
+        {/* Input Area */}
         <div className="shrink-0 p-4 bg-transparent z-10">
           {isBlocked ? (
-             <div className="max-w-4xl mx-auto bg-red-50 dark:bg-red-900/20 p-4 rounded-xl text-center shadow-sm border border-red-100 dark:border-red-900/30">
-                <span className="text-red-500 font-semibold">You have blocked this contact.</span>
-                <button onClick={() => onBlock(partner.id)} className="ml-2 text-xs underline text-red-600 dark:text-red-400">Unblock</button>
+             <div className="max-w-4xl mx-auto bg-red-50 dark:bg-red-900/20 p-4 rounded-xl text-center shadow-sm border border-red-100 dark:border-red-900/30 transition-all">
+                <span className="text-red-500 font-semibold mr-2">You have blocked this contact.</span>
+                <button onClick={() => onBlock(partner.id)} className="px-3 py-1 bg-white dark:bg-red-800 text-red-500 dark:text-red-100 text-xs font-bold rounded-full border border-red-200 dark:border-red-700 shadow-sm hover:bg-red-50 dark:hover:bg-red-700 transition">Unblock</button>
              </div>
           ) : (
              <div className="max-w-4xl mx-auto flex items-end space-x-2 bg-white dark:bg-dark-panel p-2 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 transition-colors">

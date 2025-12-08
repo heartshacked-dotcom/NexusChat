@@ -43,10 +43,14 @@ const App: React.FC = () => {
 
   const activeChat = chats.find(c => c.id === activeChatId) || null;
 
-  const handleSendMessage = (text: string, type: MessageType, mediaUrl?: string, replyToId?: string, pollOptions?: string[]) => {
-    if (!activeChatId) return;
+  const handleSendMessage = (text: string, type: MessageType, mediaUrl?: string, replyToId?: string, pollOptions?: string[], targetChatId?: string) => {
+    const chatId = targetChatId || activeChatId;
+    if (!chatId) return;
+    
+    // Find the chat object to get participants for blocking check
+    const targetChat = chats.find(c => c.id === chatId);
+    const partner = targetChat?.participants.find(p => p.id !== currentUser.id);
 
-    const partner = activeChat?.participants.find(p => p.id !== currentUser.id);
     if (partner && currentUser.blockedUsers.includes(partner.id)) {
         alert(`You have blocked ${partner.name}. Unblock to send messages.`);
         return;
@@ -71,7 +75,7 @@ const App: React.FC = () => {
     };
 
     setChats(prevChats => prevChats.map(chat => {
-      if (chat.id === activeChatId) {
+      if (chat.id === chatId) {
         return {
           ...chat,
           messages: [...chat.messages, newMessage],
@@ -91,7 +95,7 @@ const App: React.FC = () => {
 
     setTimeout(() => {
        setChats(prev => prev.map(c => 
-         c.id === activeChatId ? {
+         c.id === chatId ? {
            ...c, messages: c.messages.map(m => m.id === newMessage.id ? { ...m, status: MessageStatus.DELIVERED } : m)
          } : c
        ));
@@ -100,7 +104,7 @@ const App: React.FC = () => {
     if (currentUser.settings?.privacy.readReceipts) {
       setTimeout(() => {
          setChats(prev => prev.map(c => 
-           c.id === activeChatId ? {
+           c.id === chatId ? {
              ...c, messages: c.messages.map(m => m.id === newMessage.id ? { ...m, status: MessageStatus.READ } : m)
            } : c
          ));
@@ -108,7 +112,7 @@ const App: React.FC = () => {
     }
 
     // Auto-reply unless it's a poll or self-chat
-    if (activeChat?.participants.length && activeChat.participants.length > 0) {
+    if (targetChat?.participants.length && targetChat.participants.length > 0 && !targetChatId) {
         setTimeout(() => {
             setPartnerTyping(true);
         }, 2000);
@@ -117,7 +121,7 @@ const App: React.FC = () => {
           setPartnerTyping(false);
           const responseMsg: Message = {
             id: `m-r-${Date.now()}`,
-            senderId: activeChat?.participants.find(p => p.id !== currentUser.id)?.id || 'unknown',
+            senderId: targetChat?.participants.find(p => p.id !== currentUser.id)?.id || 'unknown',
             content: type === MessageType.AUDIO ? "Can't listen right now." : "Interesting!",
             type: MessageType.TEXT,
             timestamp: new Date(),
@@ -127,7 +131,7 @@ const App: React.FC = () => {
           };
 
           setChats(prevChats => prevChats.map(chat => {
-            if (chat.id === activeChatId) {
+            if (chat.id === chatId) {
               return {
                  ...chat,
                  messages: [...chat.messages, responseMsg],
@@ -139,6 +143,38 @@ const App: React.FC = () => {
           }));
         }, 4500);
     }
+  };
+
+  const handleStoryReply = (storyId: string, text: string) => {
+      const story = stories.find(s => s.id === storyId);
+      if (!story) return;
+
+      // Find chat with this user
+      let chat = chats.find(c => c.participants.some(p => p.id === story.userId));
+      
+      if (!chat) {
+         // Create new chat if not exists
+         const user = MOCK_USERS.find(u => u.id === story.userId);
+         if (!user) return;
+         const newChat: Chat = {
+            id: `c-${Date.now()}`,
+            type: 'individual',
+            participants: [user],
+            messages: [],
+            unreadCount: 0,
+            pinned: false,
+            archived: false,
+            muted: false
+         };
+         setChats(prev => [newChat, ...prev]);
+         chat = newChat;
+      }
+      
+      // Send message
+      handleSendMessage(`Replying to story: ${text}`, MessageType.TEXT, undefined, undefined, undefined, chat.id);
+      
+      // If we weren't in that chat, don't navigate, just notify (optional). 
+      // User stays in story view or closes it.
   };
 
   const handleReaction = (chatId: string, messageId: string, emoji: string) => {
@@ -478,7 +514,7 @@ const App: React.FC = () => {
           currentUser={currentUser}
           partnerTyping={partnerTyping}
           wallpaper={wallpaper}
-          onSendMessage={handleSendMessage}
+          onSendMessage={(text, type, mediaUrl, replyToId, pollOptions) => handleSendMessage(text, type, mediaUrl, replyToId, pollOptions)}
           onBack={() => setIsMobileListVisible(true)}
           onStartCall={(type) => handleStartCall(null, type)}
           onReact={(msgId, emoji) => activeChatId && handleReaction(activeChatId, msgId, emoji)}
@@ -512,6 +548,7 @@ const App: React.FC = () => {
           initialStoryId={viewingStoryId}
           users={MOCK_USERS}
           onClose={() => setViewingStoryId(null)}
+          onReply={handleStoryReply}
         />
       )}
 

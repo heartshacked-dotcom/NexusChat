@@ -7,11 +7,13 @@ interface StoryViewerProps {
   initialStoryId: string;
   users: User[];
   onClose: () => void;
+  onReply: (storyId: string, text: string) => void;
 }
 
-export const StoryViewer: React.FC<StoryViewerProps> = ({ stories, initialStoryId, users, onClose }) => {
+export const StoryViewer: React.FC<StoryViewerProps> = ({ stories, initialStoryId, users, onClose, onReply }) => {
   const [currentIndex, setCurrentIndex] = useState(stories.findIndex(s => s.id === initialStoryId));
   const [progress, setProgress] = useState(0);
+  const [replyText, setReplyText] = useState('');
 
   const currentStory = stories[currentIndex];
   const user = users.find(u => u.id === currentStory.userId);
@@ -50,6 +52,14 @@ export const StoryViewer: React.FC<StoryViewerProps> = ({ stories, initialStoryI
     }
   };
 
+  const sendReply = () => {
+    if (replyText.trim()) {
+      onReply(currentStory.id, replyText);
+      setReplyText('');
+      onClose();
+    }
+  };
+
   if (!currentStory || !user) return null;
 
   return (
@@ -79,7 +89,7 @@ export const StoryViewer: React.FC<StoryViewerProps> = ({ stories, initialStoryI
         </div>
 
         {/* Close Button */}
-        <button onClick={onClose} className="absolute top-8 right-4 z-20 text-white drop-shadow-md">
+        <button onClick={onClose} className="absolute top-8 right-4 z-20 text-white drop-shadow-md p-2 hover:bg-white/10 rounded-full">
            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
@@ -104,12 +114,22 @@ export const StoryViewer: React.FC<StoryViewerProps> = ({ stories, initialStoryI
         </div>
 
         {/* Reply Area */}
-        <div className="absolute bottom-4 left-0 right-0 px-4 z-20">
+        <div className="absolute bottom-4 left-0 right-0 px-4 z-20 flex items-center space-x-2">
           <input 
             type="text" 
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && sendReply()}
             placeholder="Reply..." 
-            className="w-full bg-transparent border border-white/50 rounded-full px-4 py-3 text-white placeholder-white/70 focus:outline-none focus:bg-white/10"
+            className="flex-1 bg-black/40 backdrop-blur-sm border border-white/30 rounded-full px-4 py-3 text-white placeholder-white/70 focus:outline-none focus:bg-black/60 focus:border-white/60 transition"
           />
+          <button 
+             onClick={sendReply}
+             className="p-3 bg-nexus-600 rounded-full text-white shadow-lg hover:bg-nexus-500 transition-transform transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+             disabled={!replyText.trim()}
+          >
+             <svg className="w-5 h-5 translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9-2-9-18-9 18 9-2zm0 0v-8" /></svg>
+          </button>
         </div>
       </div>
     </div>
