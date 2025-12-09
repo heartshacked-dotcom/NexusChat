@@ -26,6 +26,7 @@ interface SidebarProps {
   onUnblockUser: (userId: string) => void;
   onToggleNavPosition: () => void;
   onUpdateSettings: (settings: Partial<UserSettings>) => void;
+  onUpdateProfile: (updates: Partial<User>) => void;
 }
 
 type SettingsView = 'main' | 'account' | 'privacy' | 'chats' | 'notifications' | 'storage' | 'help' | 'app-info' | 'help-center' | 'contact-us' | 'terms';
@@ -34,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser, chats, stories, callLogs, activeChatId, activeTab, appTheme,
   currentWallpaper, navPosition, onTabChange, onSelectChat, users, onCreateChat,
   onViewStory, onStartCall, onWallpaperChange, onClearChats, onAddStory,
-  onToggleReadReceipts, onUnblockUser, onToggleNavPosition, onUpdateSettings
+  onToggleReadReceipts, onUnblockUser, onToggleNavPosition, onUpdateSettings, onUpdateProfile
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [settingsView, setSettingsView] = useState<SettingsView>('main');
@@ -149,6 +150,57 @@ export const Sidebar: React.FC<SidebarProps> = ({
     );
 
     switch (settingsView) {
+        case 'account': return (
+            <div className="animate-slide-up px-2 pb-20">
+                <SettingsHeader title="Account" onBack={() => setSettingsView('main')} />
+                <div className="flex flex-col items-center mb-8">
+                    <div className="relative group cursor-pointer mb-4">
+                        <img src={currentUser.avatar} className={`w-28 h-28 rounded-full border-4 object-cover shadow-2xl ${appTheme === 'pastel' ? 'border-white' : 'border-emerald-500'}`} alt="Profile" />
+                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        </div>
+                    </div>
+                    <p className={`text-sm ${getSubTextClass()}`}>Tap to change profile photo</p>
+                </div>
+
+                <div className="space-y-6">
+                    <div className={`p-4 rounded-2xl space-y-1 ${appTheme === 'pastel' ? 'bg-white shadow-sm' : 'bg-white/5 border border-white/5'}`}>
+                        <label className={`text-xs font-bold uppercase tracking-wider opacity-60 ${getTextClass()}`}>Display Name</label>
+                        <input 
+                            type="text" 
+                            value={currentUser.name} 
+                            onChange={(e) => onUpdateProfile({ name: e.target.value })}
+                            className={`w-full bg-transparent outline-none text-lg font-semibold ${getTextClass()} placeholder-gray-500`}
+                        />
+                    </div>
+
+                    <div className={`p-4 rounded-2xl space-y-1 ${appTheme === 'pastel' ? 'bg-white shadow-sm' : 'bg-white/5 border border-white/5'}`}>
+                        <label className={`text-xs font-bold uppercase tracking-wider opacity-60 ${getTextClass()}`}>Bio / About</label>
+                        <input 
+                            type="text" 
+                            value={currentUser.bio} 
+                            onChange={(e) => onUpdateProfile({ bio: e.target.value })}
+                            className={`w-full bg-transparent outline-none text-lg ${getTextClass()} placeholder-gray-500`}
+                        />
+                    </div>
+
+                    <div className={`p-4 rounded-2xl space-y-1 ${appTheme === 'pastel' ? 'bg-white shadow-sm' : 'bg-white/5 border border-white/5'}`}>
+                        <label className={`text-xs font-bold uppercase tracking-wider opacity-60 ${getTextClass()}`}>Phone Number</label>
+                         <input 
+                            type="text" 
+                            value={currentUser.phoneNumber} 
+                            onChange={(e) => onUpdateProfile({ phoneNumber: e.target.value })}
+                            className={`w-full bg-transparent outline-none text-lg ${getTextClass()} placeholder-gray-500`}
+                        />
+                    </div>
+                    
+                    <div className="pt-4">
+                         <button className="w-full py-4 rounded-xl border border-red-500/30 text-red-500 font-bold hover:bg-red-500/10 transition">Delete My Account</button>
+                         <p className={`text-center text-xs mt-3 opacity-50 ${getTextClass()}`}>This action allows you to permanently delete your account and data.</p>
+                    </div>
+                </div>
+            </div>
+        );
         case 'chats': return (
             <div className="animate-slide-up px-2 pb-20">
                 <SettingsHeader title="Appearance & Chats" onBack={() => setSettingsView('main')} />

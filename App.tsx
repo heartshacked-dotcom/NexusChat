@@ -373,6 +373,10 @@ const App: React.FC = () => {
       if (newSettings.navPosition) setNavPosition(newSettings.navPosition);
       if (newSettings.wallpaper) setWallpaper(newSettings.wallpaper);
   };
+  
+  const handleUpdateProfile = (updates: Partial<User>) => {
+      setCurrentUser(prev => ({ ...prev, ...updates }));
+  };
 
   const handleToggleReadReceipts = () => {
       if (currentUser.settings) handleUpdateSettings({ privacy: { ...currentUser.settings.privacy, readReceipts: !currentUser.settings.privacy.readReceipts } });
@@ -464,6 +468,7 @@ const App: React.FC = () => {
           onUnblockUser={handleUnblockUser}
           onToggleNavPosition={() => setNavPosition(prev => prev === 'top' ? 'bottom' : 'top')}
           onUpdateSettings={handleUpdateSettings}
+          onUpdateProfile={handleUpdateProfile}
         />
       </div>
 
