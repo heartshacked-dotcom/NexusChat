@@ -18,6 +18,8 @@ export enum MessageStatus {
   FAILED = 'failed'
 }
 
+export type AppTheme = 'glass' | 'amoled' | 'pastel';
+
 export interface UserSettings {
   privacy: {
     lastSeen: 'everyone' | 'contacts' | 'nobody';
@@ -29,9 +31,9 @@ export interface UserSettings {
     vibration: boolean;
     preview: boolean;
   };
-  theme: 'light' | 'dark' | 'system';
+  appTheme: AppTheme; // Replaces simple 'theme'
   wallpaper: string;
-  navPosition: 'top' | 'bottom'; // New setting
+  navPosition: 'top' | 'bottom';
 }
 
 export interface User {
@@ -91,7 +93,7 @@ export interface Chat {
   muteUntil?: Date | null;
   wallpaper?: string;
   pinnedMessageId?: string;
-  ephemeralMode?: boolean; // New feature
+  ephemeralMode?: boolean;
 }
 
 export interface Story {

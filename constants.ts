@@ -25,9 +25,9 @@ export const CURRENT_USER: User = {
   settings: {
     privacy: { lastSeen: 'everyone', profilePhoto: 'everyone', readReceipts: true },
     notifications: { sound: true, vibration: true, preview: true },
-    theme: 'light',
+    appTheme: 'glass', // Default modern theme
     wallpaper: DEFAULT_WALLPAPER,
-    navPosition: 'bottom' // Default to bottom for mobile-feel
+    navPosition: 'bottom'
   }
 };
 
