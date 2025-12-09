@@ -26,6 +26,7 @@ export const CURRENT_USER: User = {
     privacy: { lastSeen: 'everyone', profilePhoto: 'everyone', readReceipts: true },
     notifications: { sound: true, vibration: true, preview: true },
     appTheme: 'glass', // Default modern theme
+    layoutMode: 'modern',
     wallpaper: DEFAULT_WALLPAPER,
     navPosition: 'bottom'
   }

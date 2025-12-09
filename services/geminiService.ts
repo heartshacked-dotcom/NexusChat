@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { Message } from "../types";
 
@@ -41,3 +42,33 @@ export const generateSmartReplies = async (messages: Message[]): Promise<string[
     return ["Error generating replies", "Try again later", "👍"];
   }
 };
+
+export const generateChatSummary = async (messages: Message[]): Promise<string> => {
+  if (!ai) {
+    return "AI service unavailable. Please configure API Key.";
+  }
+
+  try {
+    // Summarize last 20 messages
+    const context = messages.slice(-20).map(m => 
+        `${m.senderId === 'me' ? 'Me' : 'Partner'}: ${m.content}`
+    ).join('\n');
+
+    const prompt = `
+      Summarize the following chat conversation in 3-4 bullet points. Focus on key decisions, dates, or topics discussed.
+      
+      Conversation:
+      ${context}
+    `;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+    });
+    
+    return response.text || "Could not generate summary.";
+  } catch (error) {
+      console.error("Gemini Summary Error:", error);
+      return "Error generating summary.";
+  }
+}

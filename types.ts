@@ -19,6 +19,8 @@ export enum MessageStatus {
 }
 
 export type AppTheme = 'glass' | 'amoled' | 'pastel';
+export type LayoutMode = 'modern' | 'classic';
+export type ChatFolder = 'all' | 'personal' | 'work' | 'locked';
 
 export interface UserSettings {
   privacy: {
@@ -31,7 +33,8 @@ export interface UserSettings {
     vibration: boolean;
     preview: boolean;
   };
-  appTheme: AppTheme; // Replaces simple 'theme'
+  appTheme: AppTheme; 
+  layoutMode: LayoutMode;
   wallpaper: string;
   navPosition: 'top' | 'bottom';
 }
@@ -94,6 +97,8 @@ export interface Chat {
   wallpaper?: string;
   pinnedMessageId?: string;
   ephemeralMode?: boolean;
+  folder?: ChatFolder;
+  contactNotes?: string;
 }
 
 export interface Story {

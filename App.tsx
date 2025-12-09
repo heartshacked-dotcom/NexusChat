@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatWindow } from './components/ChatWindow';
@@ -11,7 +12,32 @@ type AuthState = 'login' | 'app';
 
 const App: React.FC = () => {
   const [authState, setAuthState] = useState<AuthState>('login');
-  const [chats, setChats] = useState<Chat[]>(INITIAL_CHATS);
+  
+  // Initialize chats from LocalStorage or Default
+  const [chats, setChats] = useState<Chat[]>(() => {
+    const saved = localStorage.getItem('nexus_chats');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            // Revive Date objects from ISO strings
+            return parsed.map((c: any) => ({
+                ...c,
+                lastMessage: c.lastMessage ? { ...c.lastMessage, timestamp: new Date(c.lastMessage.timestamp) } : undefined,
+                messages: c.messages.map((m: any) => ({ 
+                    ...m, 
+                    timestamp: new Date(m.timestamp),
+                    pollOptions: m.pollOptions ? m.pollOptions.map((opt: any) => ({...opt})) : undefined
+                })),
+                muteUntil: c.muteUntil ? new Date(c.muteUntil) : undefined
+            }));
+        } catch (e) {
+            console.error("Failed to load chats from storage", e);
+            return INITIAL_CHATS;
+        }
+    }
+    return INITIAL_CHATS;
+  });
+
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeCall, setActiveCall] = useState<{ isOpen: boolean, type: CallType, partnerId: string } | null>(null);
   const [viewingStoryId, setViewingStoryId] = useState<string | null>(null);
@@ -28,6 +54,11 @@ const App: React.FC = () => {
   const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [currentUser, setCurrentUser] = useState<User>(CURRENT_USER);
+
+  // Persist Chats to LocalStorage
+  useEffect(() => {
+      localStorage.setItem('nexus_chats', JSON.stringify(chats));
+  }, [chats]);
 
   // Apply Theme Classes
   useEffect(() => {
@@ -56,7 +87,7 @@ const App: React.FC = () => {
 
   const activeChat = chats.find(c => c.id === activeChatId) || null;
 
-  // --- Message Handling Logic (Same as before) ---
+  // --- Message Handling Logic ---
   const handleSendMessage = (text: string, type: MessageType, mediaUrl?: string, replyToId?: string, pollOptions?: string[], targetChatId?: string) => {
     const chatId = targetChatId || activeChatId;
     if (!chatId) return;
@@ -69,6 +100,7 @@ const App: React.FC = () => {
         return;
     }
 
+    // EXPLICITLY capture replyToId to ensure it persists in the object
     const newMessage: Message = {
       id: `m-${Date.now()}`,
       senderId: currentUser.id,
@@ -78,7 +110,7 @@ const App: React.FC = () => {
       timestamp: new Date(),
       status: MessageStatus.SENT,
       reactions: [],
-      replyToId: replyToId,
+      replyToId: replyToId, // Ensure this is not undefined if a reply exists
       isStarred: false,
       pollOptions: type === MessageType.POLL && pollOptions ? pollOptions.map((opt, i) => ({
           id: `opt-${i}`,
@@ -106,24 +138,27 @@ const App: React.FC = () => {
        return tb - ta;
     }));
 
+    // Simulate status updates (Delivered)
     setTimeout(() => {
        setChats(prev => prev.map(c => 
          c.id === chatId ? {
-           ...c, messages: c.messages.map(m => m.id === newMessage.id ? { ...m, status: MessageStatus.DELIVERED } : m)
+           ...c, messages: c.messages.map(m => m.id === newMessage.id ? { ...m, status: MessageStatus.DELIVERED, replyToId: m.replyToId } : m)
          } : c
        ));
     }, 1000);
 
+    // Simulate status updates (Read)
     if (currentUser.settings?.privacy.readReceipts) {
       setTimeout(() => {
          setChats(prev => prev.map(c => 
            c.id === chatId ? {
-             ...c, messages: c.messages.map(m => m.id === newMessage.id ? { ...m, status: MessageStatus.READ } : m)
+             ...c, messages: c.messages.map(m => m.id === newMessage.id ? { ...m, status: MessageStatus.READ, replyToId: m.replyToId } : m)
            } : c
          ));
       }, 2500);
     }
 
+    // Partner Typing Simulation
     if (targetChat?.participants.length && targetChat.participants.length > 0 && !targetChatId) {
         setTimeout(() => setPartnerTyping(true), 2000);
         setTimeout(() => {
@@ -342,6 +377,35 @@ const App: React.FC = () => {
   const handleToggleReadReceipts = () => {
       if (currentUser.settings) handleUpdateSettings({ privacy: { ...currentUser.settings.privacy, readReceipts: !currentUser.settings.privacy.readReceipts } });
   };
+  
+  const handleToggleChatLock = () => {
+      if (!activeChatId) return;
+      
+      const chat = chats.find(c => c.id === activeChatId);
+      if (!chat) return;
+
+      if (chat.folder === 'locked') {
+          // Unlock
+          setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, folder: undefined } : c));
+      } else {
+          // Lock
+          const pin = prompt("Set PIN for Locked Folder (simulated as '1234'):");
+          if (pin === '1234') {
+              setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, folder: 'locked' } : c));
+              // CRITICAL: Close chat immediately so user has to re-enter via Locked Folder (which prompts for PIN)
+              setActiveChatId(null); 
+              setIsMobileListVisible(true);
+          } else if (pin !== null) {
+              alert("Incorrect PIN");
+          }
+      }
+  };
+
+  const handleUpdateNote = (note: string) => {
+      if (activeChatId) {
+          setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, contactNotes: note } : c));
+      }
+  };
 
   // Get Background Styles based on Theme
   const getContainerStyles = () => {
@@ -427,6 +491,8 @@ const App: React.FC = () => {
           onViewImage={setViewingImage}
           onVotePoll={handleVotePoll}
           onToggleEphemeral={handleToggleEphemeral}
+          onToggleChatLock={handleToggleChatLock}
+          onUpdateNote={handleUpdateNote}
         />
       </div>
 

@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { User, Chat, Story, CallLog, CallStatus, CallType, UserSettings, AppTheme } from '../types';
+import { User, Chat, Story, CallLog, CallStatus, CallType, UserSettings, AppTheme, ChatFolder } from '../types';
 import { WALLPAPERS } from '../constants';
 
 interface SidebarProps {
@@ -41,6 +41,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [showArchived, setShowArchived] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [activeFolder, setActiveFolder] = useState<ChatFolder>('all');
+  const [isLockedFolderOpen, setIsLockedFolderOpen] = useState(false);
 
   // Dynamic Styles based on Theme
   const getPanelClass = () => {
@@ -64,10 +66,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }
   };
 
+  const handleFolderClick = (e: React.MouseEvent, folder: ChatFolder) => {
+      e.preventDefault();
+      if (folder === 'locked') {
+          if (isLockedFolderOpen) {
+              setActiveFolder(folder);
+          } else {
+              const pin = prompt("Enter PIN to access locked chats (1234):");
+              if (pin === '1234') {
+                  setIsLockedFolderOpen(true);
+                  setActiveFolder(folder);
+              } else {
+                  if (pin !== null) alert("Incorrect PIN");
+              }
+          }
+      } else {
+          setActiveFolder(folder);
+      }
+  };
+
   const filteredChats = chats.filter(chat => {
     // Tab Filtering
     if (activeTab === 'groups' && chat.type !== 'group') return false;
     if (activeTab === 'chats' && chat.type === 'group') return false;
+
+    // Folder Filtering
+    if (activeFolder !== 'all') {
+        if (activeFolder === 'locked' && !isLockedFolderOpen) return false;
+        if (chat.folder !== activeFolder && !(activeFolder === 'locked' && chat.folder === 'locked')) return false;
+        // If 'locked' folder is selected, show only locked chats
+        if (activeFolder === 'locked' && chat.folder !== 'locked') return false;
+        // If 'personal'/'work', exclude locked
+        if (activeFolder !== 'locked' && chat.folder === 'locked') return false;
+    } else {
+        // 'all' folder shouldn't show locked chats
+        if (chat.folder === 'locked') return false;
+    }
 
     if (showArchived && !chat.archived) return false;
     if (!showArchived && chat.archived) return false;
@@ -78,6 +112,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return nameMatch || lastMsgMatch;
   });
 
+  const groupedStories = stories.reduce((acc, story) => {
+    if (!acc[story.userId]) acc[story.userId] = [];
+    acc[story.userId].push(story);
+    return acc;
+  }, {} as Record<string, Story[]>);
+
   const SettingsHeader = ({ title, onBack }: { title: string, onBack: () => void }) => (
     <div className={`flex items-center space-x-4 mb-6 sticky top-0 z-10 py-4 ${appTheme === 'glass' ? 'bg-transparent' : appTheme === 'amoled' ? 'bg-black' : 'bg-white'}`}>
       <button onClick={onBack} className={`p-2 rounded-full transition ${appTheme === 'pastel' ? 'hover:bg-gray-100 text-gray-700' : 'hover:bg-white/10 text-gray-200'}`}>
@@ -87,9 +127,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </div>
   );
 
-  const Toggle = ({ label, checked, onChange }: { label: string, checked: boolean, onChange?: () => void }) => (
+  const Toggle = ({ label, checked, onChange, description }: { label: string, checked: boolean, onChange?: () => void, description?: string }) => (
     <div className="flex items-center justify-between py-4 cursor-pointer group" onClick={onChange}>
-      <span className={`font-medium ${getTextClass()}`}>{label}</span>
+      <div className="flex flex-col">
+        <span className={`font-medium ${getTextClass()}`}>{label}</span>
+        {description && <span className={`text-xs ${getSubTextClass()}`}>{description}</span>}
+      </div>
       <div className={`w-12 h-6 flex items-center rounded-full p-1 transition-all duration-300 ${checked ? 'bg-emerald-500' : 'bg-gray-600'}`}>
         <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${checked ? 'translate-x-6' : 'translate-x-0'}`}></div>
       </div>
@@ -97,7 +140,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   );
 
   const renderSettings = () => {
-    // Theme Card Component
     const ThemeOption = ({ id, name, colors }: { id: AppTheme, name: string, colors: string }) => (
         <button onClick={() => onUpdateSettings({ appTheme: id })} className={`relative w-full p-4 rounded-2xl border-2 transition-all duration-200 flex items-center space-x-4 ${appTheme === id ? 'border-emerald-500 bg-emerald-500/10' : 'border-transparent hover:bg-gray-500/10'}`}>
             <div className={`w-12 h-12 rounded-full shadow-lg ${colors}`}></div>
@@ -109,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     switch (settingsView) {
         case 'chats': return (
             <div className="animate-slide-up px-2 pb-20">
-                <SettingsHeader title="Appearance" onBack={() => setSettingsView('main')} />
+                <SettingsHeader title="Appearance & Chats" onBack={() => setSettingsView('main')} />
                 <div className="space-y-6">
                     <div className="space-y-3">
                         <h3 className={`text-sm font-bold uppercase tracking-wider opacity-60 ${getTextClass()}`}>UI Theme</h3>
@@ -117,6 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <ThemeOption id="amoled" name="Premium Dark AMOLED" colors="bg-black border border-gray-700" />
                         <ThemeOption id="pastel" name="Minimal Pastel" colors="bg-white border border-gray-200" />
                     </div>
+
                     <div className="space-y-3">
                          <h3 className={`text-sm font-bold uppercase tracking-wider opacity-60 ${getTextClass()}`}>Wallpapers</h3>
                          <div className="grid grid-cols-3 gap-3">
@@ -126,7 +169,119 @@ export const Sidebar: React.FC<SidebarProps> = ({
                          </div>
                     </div>
                     <Toggle label="Bottom Navigation" checked={navPosition === 'bottom'} onChange={onToggleNavPosition} />
+                    <button onClick={onClearChats} className="w-full py-3 text-red-500 font-bold border border-red-500/30 rounded-xl hover:bg-red-500/10 transition">Clear All Chats</button>
                 </div>
+            </div>
+        );
+        case 'privacy': return (
+            <div className="animate-slide-up px-2 pb-20">
+                <SettingsHeader title="Privacy & Security" onBack={() => setSettingsView('main')} />
+                <div className="space-y-4">
+                    <h3 className={`text-sm font-bold uppercase tracking-wider opacity-60 ${getTextClass()}`}>Visibility</h3>
+                    <div className="flex justify-between items-center py-2">
+                        <span className={getTextClass()}>Last Seen</span>
+                        <select className={`bg-transparent ${getTextClass()} outline-none border-b border-gray-600`} value={currentUser.settings?.privacy.lastSeen} onChange={(e) => onUpdateSettings({ privacy: { ...currentUser.settings!.privacy, lastSeen: e.target.value as any } })}>
+                            <option value="everyone" className="text-black">Everyone</option>
+                            <option value="contacts" className="text-black">Contacts</option>
+                            <option value="nobody" className="text-black">Nobody</option>
+                        </select>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                        <span className={getTextClass()}>Profile Photo</span>
+                        <select className={`bg-transparent ${getTextClass()} outline-none border-b border-gray-600`} value={currentUser.settings?.privacy.profilePhoto} onChange={(e) => onUpdateSettings({ privacy: { ...currentUser.settings!.privacy, profilePhoto: e.target.value as any } })}>
+                            <option value="everyone" className="text-black">Everyone</option>
+                            <option value="contacts" className="text-black">Contacts</option>
+                            <option value="nobody" className="text-black">Nobody</option>
+                        </select>
+                    </div>
+                    <Toggle label="Read Receipts" checked={currentUser.settings?.privacy.readReceipts || false} onChange={onToggleReadReceipts} />
+                    
+                    <h3 className={`text-sm font-bold uppercase tracking-wider opacity-60 mt-6 ${getTextClass()}`}>Blocked Users</h3>
+                    {currentUser.blockedUsers.length === 0 ? <p className={getSubTextClass()}>No blocked users</p> : (
+                        <div className="space-y-2">
+                            {currentUser.blockedUsers.map(id => {
+                                const blockedUser = users.find(u => u.id === id);
+                                return (
+                                    <div key={id} className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
+                                        <span className={getTextClass()}>{blockedUser?.name || 'Unknown'}</span>
+                                        <button onClick={() => onUnblockUser(id)} className="text-red-400 text-sm">Unblock</button>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+        case 'notifications': return (
+            <div className="animate-slide-up px-2 pb-20">
+                <SettingsHeader title="Notifications" onBack={() => setSettingsView('main')} />
+                <Toggle label="Message Sounds" checked={currentUser.settings?.notifications.sound || false} onChange={() => onUpdateSettings({ notifications: { ...currentUser.settings!.notifications, sound: !currentUser.settings!.notifications.sound } })} />
+                <Toggle label="Vibration" checked={currentUser.settings?.notifications.vibration || false} onChange={() => onUpdateSettings({ notifications: { ...currentUser.settings!.notifications, vibration: !currentUser.settings!.notifications.vibration } })} />
+                <Toggle label="Show Previews" checked={currentUser.settings?.notifications.preview || false} onChange={() => onUpdateSettings({ notifications: { ...currentUser.settings!.notifications, preview: !currentUser.settings!.notifications.preview } })} />
+            </div>
+        );
+        case 'storage': return (
+            <div className="animate-slide-up px-2 pb-20">
+                <SettingsHeader title="Data & Storage" onBack={() => setSettingsView('main')} />
+                <div className={`p-4 rounded-xl mb-6 ${appTheme === 'pastel' ? 'bg-gray-100' : 'bg-white/5'}`}>
+                    <h3 className={`font-bold mb-2 ${getTextClass()}`}>Network Usage</h3>
+                    <div className="flex justify-between text-sm mb-1"><span className={getSubTextClass()}>Sent</span><span className={getTextClass()}>1.2 GB</span></div>
+                    <div className="flex justify-between text-sm"><span className={getSubTextClass()}>Received</span><span className={getTextClass()}>5.8 GB</span></div>
+                    <div className="w-full bg-gray-600 h-2 rounded-full mt-3 overflow-hidden"><div className="bg-emerald-500 h-full w-[30%]"></div></div>
+                </div>
+                <h3 className={`text-sm font-bold uppercase tracking-wider opacity-60 mb-2 ${getTextClass()}`}>Auto-Download Media</h3>
+                <Toggle label="Photos" checked={true} onChange={() => {}} description="Over WiFi and Cellular" />
+                <Toggle label="Videos" checked={false} onChange={() => {}} description="WiFi Only" />
+                <Toggle label="Documents" checked={false} onChange={() => {}} description="WiFi Only" />
+            </div>
+        );
+        case 'help': return (
+            <div className="animate-slide-up px-2 pb-20">
+                <SettingsHeader title="Help & Support" onBack={() => setSettingsView('main')} />
+                <div className="space-y-2">
+                    <button onClick={() => setSettingsView('help-center')} className={`w-full p-4 rounded-xl text-left ${appTheme === 'pastel' ? 'bg-white shadow-sm' : 'bg-white/5 hover:bg-white/10'} ${getTextClass()}`}>FAQ / Help Center</button>
+                    <button onClick={() => setSettingsView('contact-us')} className={`w-full p-4 rounded-xl text-left ${appTheme === 'pastel' ? 'bg-white shadow-sm' : 'bg-white/5 hover:bg-white/10'} ${getTextClass()}`}>Contact Us</button>
+                    <button onClick={() => setSettingsView('terms')} className={`w-full p-4 rounded-xl text-left ${appTheme === 'pastel' ? 'bg-white shadow-sm' : 'bg-white/5 hover:bg-white/10'} ${getTextClass()}`}>Terms & Privacy Policy</button>
+                    <button onClick={() => setSettingsView('app-info')} className={`w-full p-4 rounded-xl text-left ${appTheme === 'pastel' ? 'bg-white shadow-sm' : 'bg-white/5 hover:bg-white/10'} ${getTextClass()}`}>App Info</button>
+                </div>
+            </div>
+        );
+        case 'help-center': return (
+            <div className="animate-slide-up px-2 pb-20">
+                 <SettingsHeader title="Help Center" onBack={() => setSettingsView('help')} />
+                 <div className={`p-4 rounded-xl space-y-4 ${getTextClass()}`}>
+                     <details className="cursor-pointer group"><summary className="font-bold marker:text-emerald-500">How to secure my chat?</summary><p className={`mt-2 text-sm ${getSubTextClass()}`}>Use the Lock Chat feature in the Contact Info panel. You can set a PIN to access specific folders.</p></details>
+                     <details className="cursor-pointer group"><summary className="font-bold marker:text-emerald-500">Is it end-to-end encrypted?</summary><p className={`mt-2 text-sm ${getSubTextClass()}`}>Yes, NexusChat uses simulated E2E encryption for all messages and calls.</p></details>
+                     <details className="cursor-pointer group"><summary className="font-bold marker:text-emerald-500">How to delete my account?</summary><p className={`mt-2 text-sm ${getSubTextClass()}`}>Go to Account Settings and tap 'Delete My Account'. This action is irreversible.</p></details>
+                 </div>
+            </div>
+        );
+        case 'contact-us': return (
+            <div className="animate-slide-up px-2 pb-20">
+                 <SettingsHeader title="Contact Us" onBack={() => setSettingsView('help')} />
+                 <textarea className={`w-full p-4 rounded-xl h-40 outline-none ${appTheme === 'pastel' ? 'bg-gray-100 text-gray-900' : 'bg-white/5 text-white border border-gray-700'}`} placeholder="Describe your issue..."></textarea>
+                 <button className="w-full mt-4 py-3 bg-emerald-500 rounded-xl font-bold text-white hover:bg-emerald-600 transition">Submit Request</button>
+            </div>
+        );
+        case 'terms': return (
+            <div className="animate-slide-up px-2 pb-20">
+                 <SettingsHeader title="Terms & Privacy" onBack={() => setSettingsView('help')} />
+                 <div className={`text-sm space-y-4 leading-relaxed ${getTextClass()}`}>
+                     <p><strong>1. Privacy Policy:</strong> We value your privacy. Your data is yours.</p>
+                     <p><strong>2. Usage:</strong> Do not use NexusChat for illegal activities.</p>
+                     <p><strong>3. Content:</strong> You are responsible for the media you share.</p>
+                     <p className="opacity-50 text-xs">Last updated: Oct 2025</p>
+                 </div>
+            </div>
+        );
+        case 'app-info': return (
+            <div className="animate-slide-up px-2 pb-20 text-center">
+                 <SettingsHeader title="App Info" onBack={() => setSettingsView('help')} />
+                 <div className="w-20 h-20 bg-gradient-to-tr from-cyan-500 to-emerald-500 rounded-2xl mx-auto mb-4 flex items-center justify-center text-4xl shadow-neon text-white">N</div>
+                 <h2 className={`text-2xl font-bold ${getTextClass()}`}>NexusChat</h2>
+                 <p className={getSubTextClass()}>Version 2.5.0 (Beta)</p>
+                 <p className={`mt-4 ${getSubTextClass()}`}>© 2025 Nexus Inc.</p>
             </div>
         );
         case 'main': return (
@@ -202,16 +357,50 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                   </div>
 
-                  <div className="space-y-3">
+                  {/* Folder Tabs */}
+                  {activeTab === 'chats' && (
+                     <>
+                        <div className="flex space-x-2 mb-4 overflow-x-auto scrollbar-hide pb-1 z-10 relative">
+                            {(['all', 'personal', 'work', 'locked'] as ChatFolder[]).map(folder => (
+                                <button 
+                                    key={folder}
+                                    type="button" 
+                                    onClick={(e) => handleFolderClick(e, folder)}
+                                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition whitespace-nowrap ${activeFolder === folder ? 'bg-emerald-500 text-white shadow-neon' : `${appTheme === 'pastel' ? 'bg-gray-200 text-gray-600' : 'bg-white/10 text-gray-400 hover:bg-white/20'}`}`}
+                                >
+                                    {folder === 'locked' ? '🔒 Locked' : folder.charAt(0).toUpperCase() + folder.slice(1)}
+                                </button>
+                            ))}
+                        </div>
+                        {/* Archived Toggle */}
+                        <div className="flex items-center justify-between mb-2 px-1">
+                             <button 
+                                onClick={() => setShowArchived(!showArchived)} 
+                                className={`text-xs font-bold uppercase tracking-wider flex items-center space-x-1 hover:text-emerald-500 transition ${showArchived ? 'text-emerald-500' : getSubTextClass()}`}
+                             >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                <span>{showArchived ? 'Hide Archived' : 'View Archived'}</span>
+                             </button>
+                             {activeFolder === 'locked' && isLockedFolderOpen && (
+                                 <span className="text-xs text-red-400 font-bold border border-red-500/30 px-2 py-0.5 rounded-md bg-red-500/10">Locked Zone</span>
+                             )}
+                        </div>
+                     </>
+                  )}
+
+                  <div className="space-y-2">
                       {filteredChats.length === 0 ? (
                           <div className={`text-center py-10 opacity-60 ${getTextClass()}`}>
                               <p>No {activeTab === 'groups' ? 'groups' : 'chats'} found</p>
+                              {activeFolder === 'locked' && !isLockedFolderOpen && <p className="text-sm mt-2">Tap 'Locked' above to unlock</p>}
+                              {activeFolder === 'locked' && isLockedFolderOpen && <p className="text-sm mt-2 text-emerald-500">Folder is unlocked but empty.</p>}
                               <button onClick={() => setShowNewChatModal(true)} className="mt-4 text-emerald-500 font-bold hover:underline">Start a new chat</button>
                           </div>
                       ) : (
                           filteredChats.map(chat => {
                               const partner = chat.participants.find(p => p.id !== currentUser.id) || chat.participants[0];
                               const isActive = activeChatId === chat.id;
+
                               return (
                                   <div key={chat.id} onClick={() => onSelectChat(chat.id)} 
                                       className={`group p-4 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-[1.02] flex items-center space-x-4 ${isActive ? getActiveCardClass() : getCardHoverClass()}`}>
@@ -244,23 +433,78 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {activeTab === 'settings' && renderSettings()}
             
-            {activeTab === 'status' && <div className={`text-center py-10 opacity-60 ${getTextClass()}`}>Status Stories Coming Soon UI</div>}
-            {activeTab === 'calls' && <div className={`text-center py-10 opacity-60 ${getTextClass()}`}>Call History Coming Soon UI</div>}
+            {activeTab === 'status' && (
+                <div className="space-y-6 animate-fade-in">
+                    {/* My Status */}
+                    <div className="flex items-center space-x-4 p-4 rounded-2xl cursor-pointer transition hover:bg-white/5" onClick={() => onAddStory('image', '')}>
+                        <div className="relative">
+                            <img src={currentUser.avatar} className="w-16 h-16 rounded-full border-2 border-gray-500 p-0.5" alt="My Status" />
+                            <div className="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 rounded-full border-2 border-black flex items-center justify-center text-white font-bold text-sm">+</div>
+                        </div>
+                        <div>
+                            <h3 className={`font-bold text-lg ${getTextClass()}`}>My Status</h3>
+                            <p className={`text-sm ${getSubTextClass()}`}>Tap to add status update</p>
+                        </div>
+                    </div>
+
+                    {/* Recent Updates */}
+                    <div>
+                        <h4 className={`text-sm font-bold uppercase tracking-wider mb-4 px-2 opacity-60 ${getTextClass()}`}>Recent Updates</h4>
+                        <div className="space-y-4">
+                            {Object.entries(groupedStories).map(([userId, userStories]) => {
+                                const user = users.find(u => u.id === userId);
+                                if (!user || userId === currentUser.id) return null;
+                                return (
+                                    <div key={userId} onClick={() => onViewStory(userStories[0].id)} className="flex items-center space-x-4 p-3 rounded-2xl cursor-pointer hover:bg-white/5 transition group">
+                                        <div className="relative p-[3px] rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 group-hover:scale-105 transition-transform duration-300">
+                                            <img src={user.avatar} className="w-14 h-14 rounded-full border-2 border-black" alt={user.name} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className={`font-bold text-lg ${getTextClass()}`}>{user.name}</h3>
+                                            <p className={`text-sm ${getSubTextClass()}`}>{userStories.length} new stories • {userStories[userStories.length-1].timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {activeTab === 'calls' && <div className={`text-center py-10 opacity-60 ${getTextClass()}`}>Call History Coming Soon</div>}
 
         </div>
 
         {/* Floating Action Button (New Chat) */}
         {(activeTab === 'chats' || activeTab === 'groups') && (
              <div className={`absolute bottom-28 right-6 z-30 flex flex-col items-center space-y-3`}>
-                 {/* Mini FAB for Call (Example) */}
-                 <button onClick={() => alert("New Call UI")} className={`w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform opacity-0 group-hover:opacity-100 hover:opacity-100 pointer-events-none group-hover:pointer-events-auto`}>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                 </button>
-                 
                  <button onClick={() => setShowNewChatModal(true)} className={`w-14 h-14 bg-gradient-to-tr from-emerald-400 to-cyan-500 rounded-full flex items-center justify-center text-white shadow-float hover:scale-110 transition-transform group`}>
                      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                  </button>
              </div>
+        )}
+        
+        {/* New Chat Modal (Internal) */}
+        {showNewChatModal && (
+            <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+                <div className={`w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl ${appTheme === 'pastel' ? 'bg-white' : 'bg-gray-900 border border-gray-700'}`}>
+                    <div className="p-4 border-b border-gray-700 flex justify-between items-center">
+                        <h3 className={`font-bold text-lg ${getTextClass()}`}>New Chat</h3>
+                        <button onClick={() => setShowNewChatModal(false)} className="p-2"><svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                    </div>
+                    <div className="max-h-[60vh] overflow-y-auto">
+                        {users.map(u => (
+                            <button key={u.id} onClick={() => { onCreateChat(u.id); setShowNewChatModal(false); }} className={`w-full p-4 flex items-center space-x-3 hover:bg-white/5`}>
+                                <img src={u.avatar} className="w-12 h-12 rounded-full" alt="" />
+                                <div className="text-left">
+                                    <h4 className={`font-bold ${getTextClass()}`}>{u.name}</h4>
+                                    <p className={`text-xs ${getSubTextClass()}`}>{u.bio}</p>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
         )}
 
         {navPosition === 'bottom' && <NavTabs activeTab={activeTab} onChange={onTabChange} theme={appTheme} position="bottom" />}
@@ -276,10 +520,9 @@ const NavTabs = ({ activeTab, onChange, theme, position }: { activeTab: string, 
         ? "absolute bottom-6 left-6 right-6 z-40" 
         : "px-4 py-2 mb-2";
 
-    // Segmented Control style for top, Floating Dock for bottom
     const containerClass = position === 'bottom'
         ? (isPastel ? "bg-white/95 shadow-lg border border-gray-100 rounded-[2rem] justify-around" : isGlass ? "bg-black/40 backdrop-blur-xl border border-white/10 shadow-glass rounded-[2rem] justify-around" : "bg-gray-900 border border-gray-800 shadow-2xl rounded-[2rem] justify-around")
-        : (isPastel ? "bg-gray-100 p-1 rounded-xl grid grid-cols-5 gap-1" : "bg-white/5 p-1 rounded-xl grid grid-cols-5 gap-1 border border-white/5");
+        : (isPastel ? "bg-gray-100 p-1 rounded-xl grid grid-cols-4 gap-1" : "bg-white/5 p-1 rounded-xl grid grid-cols-4 gap-1 border border-white/5");
 
     const activeItemClass = position === 'bottom'
         ? (isPastel ? "text-purple-600 bg-purple-50 shadow-sm -translate-y-1" : "text-white bg-gradient-to-tr from-cyan-500 to-blue-500 shadow-neon -translate-y-1")
@@ -289,7 +532,7 @@ const NavTabs = ({ activeTab, onChange, theme, position }: { activeTab: string, 
         ? (isPastel ? "text-gray-400 hover:text-gray-600" : "text-gray-500 hover:text-gray-300")
         : (isPastel ? "text-gray-500 hover:text-gray-700 hover:bg-white/50" : "text-gray-400 hover:text-white hover:bg-white/5");
 
-    const tabs = ['chats', 'groups', 'status', 'calls', 'settings'];
+    const tabs = ['chats', 'groups', 'status', 'calls'];
 
     return (
         <div className={wrapperClass}>
@@ -306,8 +549,7 @@ const NavTabs = ({ activeTab, onChange, theme, position }: { activeTab: string, 
                                {tab === 'chats' ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg> : 
                                 tab === 'groups' ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg> :
                                 tab === 'status' ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z" /></svg> :
-                                tab === 'calls' ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg> :
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>}
                             </span>
                             {position === 'top' && <span className="text-[10px] mt-0.5 font-medium capitalize">{tab}</span>}
                         </button>
