@@ -47,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [activeFolder, setActiveFolder] = useState<ChatFolder>('all');
   const [isLockedFolderOpen, setIsLockedFolderOpen] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
+  const [callFilter, setCallFilter] = useState<'all' | 'missed' | 'incoming'>('all');
 
   // Dynamic Styles based on Theme
   const getPanelClass = () => {
@@ -126,6 +127,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     acc[story.userId].push(story);
     return acc;
   }, {} as Record<string, Story[]>);
+
+  const filteredCalls = callLogs.filter(log => {
+      if (callFilter === 'missed') return log.status === CallStatus.MISSED;
+      if (callFilter === 'incoming') return log.direction === 'incoming';
+      return true;
+  });
 
   const SettingsHeader = ({ title, onBack }: { title: string, onBack: () => void }) => (
     <div className={`flex items-center space-x-4 mb-6 sticky top-0 z-10 py-4 ${appTheme === 'glass' ? 'bg-transparent' : appTheme === 'amoled' ? 'bg-black' : appTheme === 'hybrid' ? 'bg-slate-900/80 backdrop-blur-md' : 'bg-white'}`}>
@@ -518,7 +525,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <div>
                         <h4 className={`text-sm font-bold uppercase tracking-wider mb-4 px-2 opacity-60 ${getTextClass()}`}>Recent Updates</h4>
                         <div className="space-y-4">
-                            {Object.entries(groupedStories).map(([userId, userStories]) => {
+                            {Object.entries(groupedStories).map(([userId, stories]) => {
+                                const userStories = stories as Story[];
                                 const user = users.find(u => u.id === userId);
                                 if (!user || userId === currentUser.id) return null;
                                 return (
@@ -538,7 +546,81 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
             )}
             
-            {activeTab === 'calls' && <div className={`text-center py-10 opacity-60 ${getTextClass()}`}>Call History Coming Soon</div>}
+            {activeTab === 'calls' && (
+                <div className="animate-fade-in relative h-full flex flex-col">
+                    {/* Parallax Header */}
+                    <div className={`h-40 shrink-0 relative overflow-hidden flex items-end p-6 ${appTheme === 'pastel' ? 'bg-gradient-to-br from-purple-100 to-blue-100' : 'bg-gradient-to-br from-indigo-900 to-purple-900'}`}>
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                        <div className="relative z-10">
+                            <h2 className={`text-3xl font-bold ${getTextClass()}`}>Call History</h2>
+                            <p className={`text-sm ${getSubTextClass()}`}>Recent voice and video calls</p>
+                        </div>
+                        {/* Floating Icon */}
+                        <div className="absolute top-4 right-4 text-white/10 transform rotate-12">
+                            <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.44-5.15-3.75-6.59-6.59l1.97-1.57c.26-.26.35-.65.24-1.01A11.36 11.36 0 018.59 3c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1zM12 3v10l3-3h6V3h-9z"/></svg>
+                        </div>
+                    </div>
+
+                    {/* Filter Tabs */}
+                    <div className={`px-4 py-4 sticky top-0 z-20 ${appTheme === 'glass' ? 'backdrop-blur-md' : appTheme === 'amoled' ? 'bg-black' : 'bg-transparent'}`}>
+                        <div className={`p-1 rounded-xl flex ${appTheme === 'pastel' ? 'bg-gray-200' : 'bg-black/20 border border-white/10'}`}>
+                            {(['all', 'missed', 'incoming'] as const).map(f => (
+                                <button
+                                    key={f}
+                                    onClick={() => setCallFilter(f)}
+                                    className={`flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-all ${callFilter === f ? (appTheme === 'pastel' ? 'bg-white shadow-sm text-gray-900' : 'bg-white/10 text-white shadow-neon') : getSubTextClass()}`}
+                                >
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* List */}
+                    <div className="flex-1 overflow-y-auto px-2 pb-20">
+                        {filteredCalls.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-64 text-center space-y-4">
+                                <div className="w-24 h-24 bg-gradient-to-tr from-emerald-400 to-cyan-500 rounded-full flex items-center justify-center shadow-lg animate-float">
+                                    <span className="text-4xl">📞✨</span>
+                                </div>
+                                <div>
+                                    <h3 className={`text-xl font-bold ${getTextClass()}`}>No calls yet</h3>
+                                    <p className={`text-sm ${getSubTextClass()}`}>Start a conversation with a new call!</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {filteredCalls.map(log => {
+                                    const user = users.find(u => u.id === log.userId) || users[0];
+                                    const isMissed = log.status === CallStatus.MISSED;
+                                    return (
+                                         <div key={log.id} className={`flex items-center justify-between p-4 rounded-2xl transition hover:scale-[1.01] ${appTheme === 'pastel' ? 'bg-white shadow-sm' : 'bg-white/5 hover:bg-white/10 border border-white/5'}`}>
+                                            <div className="flex items-center space-x-4">
+                                                <img src={user.avatar} className="w-12 h-12 rounded-full border border-white/10" alt="" />
+                                                <div>
+                                                    <h4 className={`font-bold ${isMissed ? 'text-red-500' : getTextClass()}`}>{user.name}</h4>
+                                                    <div className="flex items-center space-x-1 text-xs opacity-60">
+                                                        {log.direction === 'outgoing' ? <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg> : <svg className={`w-3 h-3 ${isMissed ? 'text-red-500' : 'text-blue-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>}
+                                                        <span className={getSubTextClass()}>{log.timestamp.toLocaleDateString()} • {log.timestamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => onStartCall(user.id, log.type)} className={`p-3 rounded-full relative group overflow-hidden ${isMissed ? 'bg-red-500/20 text-red-500' : 'bg-emerald-500/20 text-emerald-500'}`}>
+                                                 <div className="absolute inset-0 bg-current opacity-0 group-hover:opacity-20 transition"></div>
+                                                 {log.type === CallType.VIDEO ? (
+                                                     <svg className="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                                 ) : (
+                                                     <svg className="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                                 )}
+                                            </button>
+                                         </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
         </div>
 
