@@ -354,6 +354,28 @@ const App: React.FC = () => {
   const handleToggleEphemeral = () => { if (activeChatId) setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, ephemeralMode: !c.ephemeralMode } : c)); };
   const handleArchiveChat = () => { if (activeChatId) { setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, archived: !c.archived } : c)); setIsMobileListVisible(true); setActiveChatId(null); }};
 
+  // Chat Actions for Sidebar
+  const handlePinChat = (chatId: string) => {
+      setChats(prev => prev.map(c => c.id === chatId ? { ...c, pinned: !c.pinned } : c).sort((a, b) => {
+           // Re-sort to move pinned to top
+           if (a.pinned === b.pinned) return 0; // Stable sort for same pin status
+           if (!a.pinned && b.pinned) return 1; // Wait, we just toggled, so re-sort logic in next render? No, manual sort here.
+           return -1;
+      }));
+  };
+
+  const handleMuteChat = (chatId: string) => {
+      setChats(prev => prev.map(c => c.id === chatId ? { ...c, muted: !c.muted } : c));
+  };
+
+  const handleArchiveChatById = (chatId: string) => {
+      setChats(prev => prev.map(c => c.id === chatId ? { ...c, archived: !c.archived } : c));
+      if (activeChatId === chatId) {
+          setIsMobileListVisible(true);
+          setActiveChatId(null);
+      }
+  };
+
   const handleBlockUser = (userId: string) => {
       const isBlocked = currentUser.blockedUsers.includes(userId);
       if (isBlocked) {
@@ -506,6 +528,9 @@ const App: React.FC = () => {
           onToggleNavPosition={() => setNavPosition(prev => prev === 'top' ? 'bottom' : 'top')}
           onUpdateSettings={handleUpdateSettings}
           onUpdateProfile={handleUpdateProfile}
+          onPinChat={handlePinChat}
+          onMuteChat={handleMuteChat}
+          onArchiveChat={handleArchiveChatById}
         />
       </div>
 

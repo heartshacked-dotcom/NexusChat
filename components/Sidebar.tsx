@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { User, Chat, Story, CallLog, CallStatus, CallType, UserSettings, AppTheme, ChatFolder } from '../types';
 import { WALLPAPERS } from '../constants';
 import { PinModal } from './PinModal';
@@ -28,6 +28,9 @@ interface SidebarProps {
   onToggleNavPosition: () => void;
   onUpdateSettings: (settings: Partial<UserSettings>) => void;
   onUpdateProfile: (updates: Partial<User>) => void;
+  onPinChat: (chatId: string) => void;
+  onMuteChat: (chatId: string) => void;
+  onArchiveChat: (chatId: string) => void;
 }
 
 type SettingsView = 'main' | 'account' | 'privacy' | 'chats' | 'notifications' | 'storage' | 'help' | 'app-info' | 'help-center' | 'contact-us' | 'terms';
@@ -36,7 +39,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentUser, chats, stories, callLogs, activeChatId, activeTab, appTheme,
   currentWallpaper, navPosition, onTabChange, onSelectChat, users, onCreateChat,
   onViewStory, onStartCall, onWallpaperChange, onClearChats, onAddStory,
-  onToggleReadReceipts, onUnblockUser, onToggleNavPosition, onUpdateSettings, onUpdateProfile
+  onToggleReadReceipts, onUnblockUser, onToggleNavPosition, onUpdateSettings, onUpdateProfile,
+  onPinChat, onMuteChat, onArchiveChat
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [settingsView, setSettingsView] = useState<SettingsView>('main');
@@ -48,6 +52,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isLockedFolderOpen, setIsLockedFolderOpen] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [callFilter, setCallFilter] = useState<'all' | 'missed' | 'incoming'>('all');
+
+  // Sliding Tabs Refs
+  const tabsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+
+  useLayoutEffect(() => {
+    if (activeTab !== 'chats') return;
+
+    const updateIndicator = () => {
+        const folders: ChatFolder[] = ['all', 'personal', 'work', 'locked'];
+        const index = folders.indexOf(activeFolder);
+        const currentTab = tabsRef.current[index];
+        
+        if (currentTab) {
+            setIndicatorStyle({
+                left: currentTab.offsetLeft,
+                width: currentTab.offsetWidth
+            });
+        }
+    };
+
+    // Calculate immediately
+    updateIndicator();
+
+    // Recalculate on container resize (handles window resize and layout shifts)
+    const resizeObserver = new ResizeObserver(() => {
+        updateIndicator();
+    });
+
+    if (tabsContainerRef.current) {
+        resizeObserver.observe(tabsContainerRef.current);
+    }
+    
+    // Backup timeout for any delayed font loading or animations
+    const timer = setTimeout(updateIndicator, 150);
+
+    return () => {
+        resizeObserver.disconnect();
+        clearTimeout(timer);
+    };
+  }, [activeFolder, activeTab, appTheme, navPosition]); // Dependencies that might affect layout
 
   // Dynamic Styles based on Theme
   const getPanelClass = () => {
@@ -383,7 +429,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className={`h-full flex flex-col ${getPanelClass()} transition-colors duration-500 relative`}>
         {/* Profile Card / Header (Dashboard Style) */}
-        <div className="p-4 shrink-0">
+        <div className="p-4 shrink-0 relative z-20">
             <div className={`p-4 rounded-2xl flex items-center justify-between shadow-lg transition-all duration-300 ${appTheme === 'pastel' ? 'bg-white' : appTheme === 'hybrid' ? 'bg-gradient-to-r from-slate-800 to-indigo-900 border border-white/10 shadow-hybrid' : 'bg-gradient-to-r from-indigo-600 to-purple-700 text-white shadow-neon-purple'}`}>
                 <div className="flex items-center space-x-3 cursor-pointer" onClick={() => { onTabChange('settings'); setSettingsView('main'); }}>
                     <div className="relative">
@@ -403,199 +449,248 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {navPosition === 'top' && <NavTabs activeTab={activeTab} onChange={onTabChange} theme={appTheme} position="top" />}
 
-        {/* Content */}
-        <div className={`flex-1 overflow-y-auto scrollbar-hide px-4 ${navPosition === 'bottom' ? 'pb-28' : 'pb-4'}`}>
+        {/* Content Area - Fixed Flex Column with internal scrolling logic */}
+        <div className={`flex-1 flex flex-col overflow-hidden relative z-10`}>
+            
             {(activeTab === 'chats' || activeTab === 'groups') && (
                 <>
-                  {/* Animated Search Bar */}
-                  <div className={`mb-4 sticky top-0 z-20 pt-2 pb-2 transition-all ${appTheme === 'glass' ? 'bg-transparent' : appTheme === 'amoled' ? 'bg-black' : appTheme === 'hybrid' ? 'bg-slate-900/80 backdrop-blur-md' : 'bg-white'}`}>
-                      <div className={`relative group w-full transition-all duration-300 ${isSearchFocused ? 'scale-105' : 'scale-100'}`}>
-                          <div className={`absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none`}>
-                              <svg className={`w-5 h-5 ${isSearchFocused ? 'text-emerald-500' : getSubTextClass()}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                  {/* Fixed Header Section (Search & Tabs) - No Scrolling */}
+                  <div className={`shrink-0 px-4 pt-2 transition-all z-20 ${appTheme === 'glass' ? 'bg-transparent' : appTheme === 'amoled' ? 'bg-black' : appTheme === 'hybrid' ? 'bg-slate-900/0' : 'bg-white'}`}>
+                      {/* Animated Search Bar */}
+                      <div className={`mb-4 pt-2`}>
+                          <div className={`relative group w-full transition-all duration-300 ${isSearchFocused ? 'scale-105' : 'scale-100'}`}>
+                              <div className={`absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none`}>
+                                  <svg className={`w-5 h-5 ${isSearchFocused ? 'text-emerald-500' : getSubTextClass()}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                              </div>
+                              <input 
+                                    type="text" 
+                                    placeholder="Search conversations..." 
+                                    value={searchTerm} 
+                                    onFocus={() => setIsSearchFocused(true)}
+                                    onBlur={() => setIsSearchFocused(false)}
+                                    onChange={(e) => setSearchTerm(e.target.value)} 
+                                    className={`w-full pl-12 pr-4 py-3 rounded-2xl outline-none transition-all shadow-lg ${appTheme === 'pastel' ? 'bg-gray-100 text-gray-900 focus:bg-white focus:ring-2 focus:ring-purple-200' : 'bg-white/5 text-white focus:bg-white/10 border border-white/5 focus:border-emerald-500/50'}`} 
+                              />
                           </div>
-                          <input 
-                                type="text" 
-                                placeholder="Search conversations..." 
-                                value={searchTerm} 
-                                onFocus={() => setIsSearchFocused(true)}
-                                onBlur={() => setIsSearchFocused(false)}
-                                onChange={(e) => setSearchTerm(e.target.value)} 
-                                className={`w-full pl-12 pr-4 py-3 rounded-2xl outline-none transition-all shadow-lg ${appTheme === 'pastel' ? 'bg-gray-100 text-gray-900 focus:bg-white focus:ring-2 focus:ring-purple-200' : 'bg-white/5 text-white focus:bg-white/10 border border-white/5 focus:border-emerald-500/50'}`} 
-                          />
                       </div>
+
+                      {/* Folder Tabs with Sliding Indicator */}
+                      {activeTab === 'chats' && (
+                         <div className="mb-2 relative z-10">
+                            <div ref={tabsContainerRef} className={`flex items-center relative p-1 rounded-full overflow-hidden ${appTheme === 'pastel' ? 'bg-gray-100' : 'bg-white/5 border border-white/5'}`}>
+                                {/* Animated Indicator */}
+                                <div 
+                                    className={`absolute top-1 bottom-1 rounded-full transition-all duration-300 ease-out shadow-lg ${appTheme === 'pastel' ? 'bg-white border border-gray-200' : 'bg-emerald-500'}`}
+                                    style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
+                                ></div>
+                                
+                                {(['all', 'personal', 'work', 'locked'] as ChatFolder[]).map((folder, idx) => (
+                                    <button 
+                                        key={folder}
+                                        ref={el => { tabsRef.current[idx] = el }}
+                                        type="button" 
+                                        onClick={(e) => handleFolderClick(e, folder)}
+                                        className={`relative z-10 flex-1 py-1.5 text-xs font-bold uppercase tracking-wider text-center transition-colors duration-300 ${activeFolder === folder ? (appTheme === 'pastel' ? 'text-gray-900' : 'text-white') : (appTheme === 'pastel' ? 'text-gray-500 hover:text-gray-700' : 'text-gray-400 hover:text-white')}`}
+                                    >
+                                        {folder === 'locked' ? '🔒' : folder}
+                                    </button>
+                                ))}
+                            </div>
+                            
+                            {/* Sub-actions for Locked/Archived */}
+                            <div className="flex items-center justify-between mt-2 px-2">
+                                 <button 
+                                    onClick={() => setShowArchived(!showArchived)} 
+                                    className={`text-[10px] font-bold uppercase tracking-widest flex items-center space-x-1 hover:text-emerald-500 transition ${showArchived ? 'text-emerald-500' : getSubTextClass()}`}
+                                 >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                    <span>{showArchived ? 'Hide Archived' : 'Archived'}</span>
+                                 </button>
+                                 {activeFolder === 'locked' && isLockedFolderOpen && (
+                                     <button 
+                                        onClick={handleLockFolder}
+                                        className="text-[10px] uppercase tracking-widest text-red-400 font-bold flex items-center space-x-1 hover:text-red-300 transition"
+                                     >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                        <span>Lock Folder</span>
+                                     </button>
+                                 )}
+                            </div>
+                         </div>
+                      )}
                   </div>
 
-                  {/* Folder Tabs */}
-                  {activeTab === 'chats' && (
-                     <>
-                        <div className="flex space-x-2 mb-4 overflow-x-auto scrollbar-hide pb-1 z-10 relative">
-                            {(['all', 'personal', 'work', 'locked'] as ChatFolder[]).map(folder => (
-                                <button 
-                                    key={folder}
-                                    type="button" 
-                                    onClick={(e) => handleFolderClick(e, folder)}
-                                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition whitespace-nowrap ${activeFolder === folder ? 'bg-emerald-500 text-white shadow-neon' : `${appTheme === 'pastel' ? 'bg-gray-200 text-gray-600' : 'bg-white/10 text-gray-400 hover:bg-white/20'}`}`}
-                                >
-                                    {folder === 'locked' ? '🔒 Locked' : folder.charAt(0).toUpperCase() + folder.slice(1)}
-                                </button>
-                            ))}
-                        </div>
-                        {/* Archived Toggle / Lock Actions */}
-                        <div className="flex items-center justify-between mb-2 px-1">
-                             <button 
-                                onClick={() => setShowArchived(!showArchived)} 
-                                className={`text-xs font-bold uppercase tracking-wider flex items-center space-x-1 hover:text-emerald-500 transition ${showArchived ? 'text-emerald-500' : getSubTextClass()}`}
-                             >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-                                <span>{showArchived ? 'Hide Archived' : 'View Archived'}</span>
-                             </button>
-                             {activeFolder === 'locked' && isLockedFolderOpen && (
-                                 <button 
-                                    onClick={handleLockFolder}
-                                    className="text-xs text-red-400 font-bold border border-red-500/30 px-3 py-1 rounded-full bg-red-500/10 hover:bg-red-500/20 flex items-center space-x-1 transition"
-                                 >
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                                    <span>Lock Folder</span>
-                                 </button>
-                             )}
-                        </div>
-                     </>
-                  )}
+                  {/* Scrollable Chat List */}
+                  <div className={`flex-1 overflow-y-auto scrollbar-hide px-4 ${navPosition === 'bottom' ? 'pb-28' : 'pb-4'}`}>
+                      <div className="space-y-3 relative min-h-[300px] mt-2">
+                          {/* Parallax Background */}
+                          <div className={`absolute inset-0 -mx-4 opacity-10 pointer-events-none z-0 bg-fixed bg-cover`} style={{ backgroundImage: `url('https://www.transparenttextures.com/patterns/cubes.png')` }}></div>
 
-                  <div className="space-y-2">
-                      {filteredChats.length === 0 ? (
-                          <div className={`text-center py-10 opacity-60 ${getTextClass()}`}>
-                              <p>No {activeTab === 'groups' ? 'groups' : 'chats'} found</p>
-                              {activeFolder === 'locked' && !isLockedFolderOpen && <p className="text-sm mt-2">Tap 'Locked' above to unlock</p>}
-                              {activeFolder === 'locked' && isLockedFolderOpen && <p className="text-sm mt-2 text-emerald-500">Folder is unlocked but empty.</p>}
-                              <button onClick={() => setShowNewChatModal(true)} className="mt-4 text-emerald-500 font-bold hover:underline">Start a new chat</button>
-                          </div>
-                      ) : (
-                          filteredChats.map(chat => {
-                              const partner = chat.participants.find(p => p.id !== currentUser.id) || chat.participants[0];
-                              const isActive = activeChatId === chat.id;
+                          {filteredChats.length === 0 ? (
+                              <div className={`text-center py-10 opacity-60 ${getTextClass()} relative z-10`}>
+                                  <p>No {activeTab === 'groups' ? 'groups' : 'chats'} found</p>
+                                  {activeFolder === 'locked' && !isLockedFolderOpen && <p className="text-sm mt-2">Tap 'Locked' above to unlock</p>}
+                                  <button onClick={() => setShowNewChatModal(true)} className="mt-4 text-emerald-500 font-bold hover:underline">Start a new chat</button>
+                              </div>
+                          ) : (
+                              filteredChats.map(chat => {
+                                  const partner = chat.participants.find(p => p.id !== currentUser.id) || chat.participants[0];
+                                  const isActive = activeChatId === chat.id;
 
-                              return (
-                                  <div key={chat.id} onClick={() => onSelectChat(chat.id)} 
-                                      className={`group p-4 rounded-2xl cursor-pointer transition-all duration-300 transform hover:scale-[1.02] flex items-center space-x-4 ${isActive ? getActiveCardClass() : getCardHoverClass()}`}>
-                                      <div className="relative">
-                                          <img src={partner.avatar} className="w-14 h-14 rounded-full object-cover shadow-sm group-hover:shadow-neon transition-all" alt="" />
-                                          {partner.status === 'online' && <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-black rounded-full shadow-neon"></div>}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                          <div className="flex justify-between items-center mb-1">
-                                              <h3 className={`font-bold text-lg truncate ${getTextClass()}`}>{partner.name}</h3>
-                                              {chat.lastMessage && <span className={`text-xs font-medium ${getSubTextClass()}`}>{chat.lastMessage.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>}
+                                  return (
+                                      <div key={chat.id} className="relative group mb-3 h-20">
+                                          {/* Action Buttons Layer (Behind) */}
+                                          <div className="absolute inset-y-0 right-0 w-36 flex items-center justify-end pr-2 space-x-2 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75">
+                                              <button onClick={(e) => { e.stopPropagation(); onPinChat(chat.id); }} className={`p-2 rounded-full transition hover:scale-110 ${chat.pinned ? 'bg-yellow-500 text-white' : 'bg-gray-700 text-gray-300'}`}>
+                                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                                              </button>
+                                              <button onClick={(e) => { e.stopPropagation(); onMuteChat(chat.id); }} className={`p-2 rounded-full transition hover:scale-110 ${chat.muted ? 'bg-red-500 text-white' : 'bg-gray-700 text-gray-300'}`}>
+                                                  {chat.muted ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg> : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>}
+                                              </button>
+                                              <button onClick={(e) => { e.stopPropagation(); onArchiveChat(chat.id); }} className={`p-2 rounded-full transition hover:scale-110 ${chat.archived ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-300'}`}>
+                                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                              </button>
                                           </div>
-                                          <p className={`text-sm truncate opacity-80 ${getSubTextClass()}`}>
-                                              {chat.lastMessage ? (
-                                                  <span className="flex items-center">
-                                                      {chat.lastMessage.senderId === currentUser.id && <span className="mr-1">You:</span>}
-                                                      {chat.lastMessage.type === 'image' ? '📷 Photo' : chat.lastMessage.content}
-                                                  </span>
-                                              ) : "Start chatting..."}
-                                          </p>
+
+                                          {/* Glass Card Layer (Front) - Slides on Hover to reveal actions */}
+                                          <div 
+                                              onClick={() => onSelectChat(chat.id)}
+                                              className={`relative z-10 w-full h-full p-4 rounded-2xl cursor-pointer flex items-center space-x-4 transition-transform duration-300 ease-out group-hover:-translate-x-32 backdrop-blur-md ${isActive ? getActiveCardClass() : `${appTheme === 'pastel' ? 'bg-white shadow-sm' : 'bg-white/5 border border-white/5'}`}`}
+                                          >
+                                              <div className="relative shrink-0">
+                                                  <img src={partner.avatar} className="w-12 h-12 rounded-full object-cover shadow-sm group-hover:shadow-lg transition-all" alt="" />
+                                                  {partner.status === 'online' && <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-black rounded-full shadow-neon"></div>}
+                                              </div>
+                                              <div className="flex-1 min-w-0">
+                                                  <div className="flex justify-between items-center mb-1">
+                                                      <div className="flex items-center space-x-1 min-w-0">
+                                                          <h3 className={`font-bold text-lg truncate ${getTextClass()}`}>{partner.name}</h3>
+                                                          {chat.pinned && <span className="text-yellow-500 text-[10px]">📌</span>}
+                                                          {chat.muted && <span className="text-red-400 text-[10px]">🔕</span>}
+                                                          {chat.archived && <span className="text-blue-400 text-[10px]">📦</span>}
+                                                      </div>
+                                                      {chat.lastMessage && <span className={`text-xs font-medium shrink-0 ${getSubTextClass()}`}>{chat.lastMessage.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>}
+                                                  </div>
+                                                  <p className={`text-sm truncate opacity-80 ${getSubTextClass()}`}>
+                                                      {chat.lastMessage ? (
+                                                          <span className="flex items-center">
+                                                              {chat.lastMessage.senderId === currentUser.id && <span className="mr-1">You:</span>}
+                                                              {chat.lastMessage.type === 'image' && <span className="mr-1">📷</span>}
+                                                              {chat.lastMessage.type === 'video' && <span className="mr-1">🎥</span>}
+                                                              {chat.lastMessage.type === 'audio' && <span className="mr-1">🎤</span>}
+                                                              {chat.lastMessage.content || (chat.lastMessage.type === 'image' ? 'Photo' : 'Media')}
+                                                          </span>
+                                                      ) : "Start chatting..."}
+                                                  </p>
+                                              </div>
+                                              {chat.unreadCount > 0 && <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-bold text-black shadow-neon shrink-0">{chat.unreadCount}</div>}
+                                          </div>
                                       </div>
-                                      {chat.unreadCount > 0 && <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold text-black shadow-neon">{chat.unreadCount}</div>}
-                                  </div>
-                              );
-                          })
-                      )}
+                                  );
+                              })
+                          )}
+                      </div>
                   </div>
                 </>
             )}
 
-            {activeTab === 'settings' && renderSettings()}
+            {activeTab === 'settings' && (
+                <div className={`flex-1 overflow-y-auto scrollbar-hide px-4 ${navPosition === 'bottom' ? 'pb-28' : 'pb-4'}`}>
+                    {renderSettings()}
+                </div>
+            )}
             
             {activeTab === 'status' && (
-                <div className="space-y-6 animate-fade-in pb-20">
-                    {/* My Status - Glowing & 3D */}
-                    <div 
-                        className={`relative overflow-hidden p-4 rounded-3xl cursor-pointer transition-all duration-300 group transform hover:scale-[1.01] ${
-                            appTheme === 'pastel' ? 'bg-white shadow-lg border border-gray-100' : 
-                            appTheme === 'hybrid' ? 'bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-hybrid' :
-                            'bg-white/5 backdrop-blur-lg border border-white/5 shadow-glass'
-                        }`}
-                        onClick={() => onAddStory('image', '')}
-                    >
-                        {/* Background Glow for My Status */}
-                        <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-[50px] opacity-20 pointer-events-none ${appTheme === 'pastel' ? 'bg-purple-400' : 'bg-emerald-500'}`}></div>
+                <div className={`flex-1 overflow-y-auto scrollbar-hide px-4 ${navPosition === 'bottom' ? 'pb-28' : 'pb-4'}`}>
+                    <div className="space-y-6 animate-fade-in pb-20">
+                        {/* My Status - Glowing & 3D */}
+                        <div 
+                            className={`relative overflow-hidden p-4 rounded-3xl cursor-pointer transition-all duration-300 group transform hover:scale-[1.01] ${
+                                appTheme === 'pastel' ? 'bg-white shadow-lg border border-gray-100' : 
+                                appTheme === 'hybrid' ? 'bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-hybrid' :
+                                'bg-white/5 backdrop-blur-lg border border-white/5 shadow-glass'
+                            }`}
+                            onClick={() => onAddStory('image', '')}
+                        >
+                            {/* Background Glow for My Status */}
+                            <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-[50px] opacity-20 pointer-events-none ${appTheme === 'pastel' ? 'bg-purple-400' : 'bg-emerald-500'}`}></div>
 
-                        <div className="flex items-center space-x-5 relative z-10">
-                            <div className="relative">
-                                <div className={`w-16 h-16 rounded-full p-[2px] ${appTheme === 'pastel' ? 'bg-gray-200' : 'bg-gradient-to-tr from-emerald-500 to-cyan-500 shadow-neon'}`}>
-                                    <img src={currentUser.avatar} className={`w-full h-full rounded-full object-cover border-2 ${appTheme === 'pastel' ? 'border-white' : 'border-gray-900'}`} alt="My Status" />
+                            <div className="flex items-center space-x-5 relative z-10">
+                                <div className="relative">
+                                    <div className={`w-16 h-16 rounded-full p-[2px] ${appTheme === 'pastel' ? 'bg-gray-200' : 'bg-gradient-to-tr from-emerald-500 to-cyan-500 shadow-neon'}`}>
+                                        <img src={currentUser.avatar} className={`w-full h-full rounded-full object-cover border-2 ${appTheme === 'pastel' ? 'border-white' : 'border-gray-900'}`} alt="My Status" />
+                                    </div>
+                                    <div className="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-white font-bold text-sm shadow-md animate-pulse">
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
+                                    </div>
                                 </div>
-                                <div className="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-white font-bold text-sm shadow-md animate-pulse">
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
+                                <div className="flex-1">
+                                    <h3 className={`font-bold text-lg ${getTextClass()}`}>My Status</h3>
+                                    <p className={`text-sm opacity-70 ${getSubTextClass()}`}>Tap to add to your story</p>
                                 </div>
-                            </div>
-                            <div className="flex-1">
-                                <h3 className={`font-bold text-lg ${getTextClass()}`}>My Status</h3>
-                                <p className={`text-sm opacity-70 ${getSubTextClass()}`}>Tap to add to your story</p>
-                            </div>
-                            {/* Mini Camera Icon */}
-                            <div className={`p-3 rounded-full ${appTheme === 'pastel' ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-white'}`}>
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                {/* Mini Camera Icon */}
+                                <div className={`p-3 rounded-full ${appTheme === 'pastel' ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-white'}`}>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Recent Updates */}
-                    <div>
-                        <h4 className={`text-sm font-bold uppercase tracking-wider mb-4 px-2 opacity-60 ${getTextClass()}`}>Recent Updates</h4>
-                        <div className="space-y-3">
-                            {Object.entries(groupedStories).map(([userId, stories]) => {
-                                const userStories = stories as Story[];
-                                const user = users.find(u => u.id === userId);
-                                const lastStory = userStories[userStories.length - 1];
-                                if (!user || userId === currentUser.id) return null;
+                        {/* Recent Updates */}
+                        <div>
+                            <h4 className={`text-sm font-bold uppercase tracking-wider mb-4 px-2 opacity-60 ${getTextClass()}`}>Recent Updates</h4>
+                            <div className="space-y-3">
+                                {Object.entries(groupedStories).map(([userId, stories]) => {
+                                    const userStories = stories as Story[];
+                                    const user = users.find(u => u.id === userId);
+                                    const lastStory = userStories[userStories.length - 1];
+                                    if (!user || userId === currentUser.id) return null;
 
-                                return (
-                                    <div 
-                                        key={userId} 
-                                        onClick={() => onViewStory(userStories[0].id)} 
-                                        className={`group relative flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] ${
-                                            appTheme === 'pastel' ? 'bg-white shadow-sm hover:shadow-md border border-gray-100' : 
-                                            appTheme === 'hybrid' ? 'bg-slate-800/40 backdrop-blur-md border border-white/5 hover:bg-slate-800/60 shadow-lg' :
-                                            'bg-white/5 backdrop-blur-sm border border-white/5 hover:bg-white/10'
-                                        }`}
-                                    >
-                                        {/* Avatar with 3D Ring */}
-                                        <div className="relative mr-4 shrink-0">
-                                            <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 blur-[2px] opacity-80 group-hover:opacity-100 transition duration-500"></div>
-                                            <div className="relative p-[3px] rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 shadow-lg">
-                                                <img src={user.avatar} className={`w-14 h-14 rounded-full object-cover border-2 ${appTheme === 'pastel' ? 'border-white' : 'border-gray-900'}`} alt={user.name} />
+                                    return (
+                                        <div 
+                                            key={userId} 
+                                            onClick={() => onViewStory(userStories[0].id)} 
+                                            className={`group relative flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] ${
+                                                appTheme === 'pastel' ? 'bg-white shadow-sm hover:shadow-md border border-gray-100' : 
+                                                appTheme === 'hybrid' ? 'bg-slate-800/40 backdrop-blur-md border border-white/5 hover:bg-slate-800/60 shadow-lg' :
+                                                'bg-white/5 backdrop-blur-sm border border-white/5 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            {/* Avatar with 3D Ring */}
+                                            <div className="relative mr-4 shrink-0">
+                                                <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 blur-[2px] opacity-80 group-hover:opacity-100 transition duration-500"></div>
+                                                <div className="relative p-[3px] rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 shadow-lg">
+                                                    <img src={user.avatar} className={`w-14 h-14 rounded-full object-cover border-2 ${appTheme === 'pastel' ? 'border-white' : 'border-gray-900'}`} alt={user.name} />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className={`font-bold text-lg truncate ${getTextClass()}`}>{user.name}</h3>
+                                                <p className={`text-sm ${getSubTextClass()} truncate`}>
+                                                    {userStories.length} new {userStories.length === 1 ? 'story' : 'stories'} • {lastStory.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                </p>
+                                            </div>
+
+                                            {/* Mini Thumbnail Preview */}
+                                            <div className="shrink-0 w-10 h-14 rounded-lg overflow-hidden border border-white/10 shadow-md transform rotate-3 group-hover:rotate-0 transition duration-300">
+                                                {lastStory.type === 'image' && <img src={lastStory.content} className="w-full h-full object-cover" alt="" />}
+                                                {lastStory.type === 'video' && <video src={lastStory.content} className="w-full h-full object-cover" muted />}
+                                                {lastStory.type === 'text' && (
+                                                    <div className="w-full h-full flex items-center justify-center text-[6px] text-white font-bold p-1 text-center" style={{ backgroundColor: lastStory.background || '#6366f1' }}>
+                                                        {lastStory.content}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className={`font-bold text-lg truncate ${getTextClass()}`}>{user.name}</h3>
-                                            <p className={`text-sm ${getSubTextClass()} truncate`}>
-                                                {userStories.length} new {userStories.length === 1 ? 'story' : 'stories'} • {lastStory.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                            </p>
-                                        </div>
-
-                                        {/* Mini Thumbnail Preview */}
-                                        <div className="shrink-0 w-10 h-14 rounded-lg overflow-hidden border border-white/10 shadow-md transform rotate-3 group-hover:rotate-0 transition duration-300">
-                                            {lastStory.type === 'image' && <img src={lastStory.content} className="w-full h-full object-cover" alt="" />}
-                                            {lastStory.type === 'video' && <video src={lastStory.content} className="w-full h-full object-cover" muted />}
-                                            {lastStory.type === 'text' && (
-                                                <div className="w-full h-full flex items-center justify-center text-[6px] text-white font-bold p-1 text-center" style={{ backgroundColor: lastStory.background || '#6366f1' }}>
-                                                    {lastStory.content}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
             
             {activeTab === 'calls' && (
-                <div className="animate-fade-in relative h-full flex flex-col">
+                <div className="flex-1 flex flex-col h-full overflow-hidden">
                     {/* Parallax Header */}
                     <div className={`h-40 shrink-0 relative overflow-hidden flex items-end p-6 ${appTheme === 'pastel' ? 'bg-gradient-to-br from-purple-100 to-blue-100' : 'bg-gradient-to-br from-indigo-900 to-purple-900'}`}>
                         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
@@ -624,8 +719,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                     </div>
 
-                    {/* List */}
-                    <div className="flex-1 overflow-y-auto px-2 pb-20">
+                    {/* Scrollable List */}
+                    <div className={`flex-1 overflow-y-auto px-2 ${navPosition === 'bottom' ? 'pb-28' : 'pb-20'}`}>
                         {filteredCalls.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-64 text-center space-y-4">
                                 <div className="w-24 h-24 bg-gradient-to-tr from-emerald-400 to-cyan-500 rounded-full flex items-center justify-center shadow-lg animate-float">

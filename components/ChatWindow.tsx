@@ -45,6 +45,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   
   const [showContactInfo, setShowContactInfo] = useState(false);
+  const [showAllMedia, setShowAllMedia] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [chatSummary, setChatSummary] = useState('');
   const [contactNote, setContactNote] = useState('');
@@ -69,6 +70,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setInputValue('');
       setIsSearching(false);
       setSearchTerm('');
+      setShowAllMedia(false);
   }, [chat?.id]);
 
   const isPastel = appTheme === 'pastel';
@@ -485,107 +487,190 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
         {/* Contact Info Drawer */}
         {showContactInfo && (
-            <div className={`fixed inset-0 z-50 md:static md:w-80 md:shrink-0 md:border-l overflow-y-auto animate-slide-in-right ${getDrawerClass()}`}>
-                <div className="absolute top-4 right-4 z-50">
-                    <button onClick={() => setShowContactInfo(false)} className="p-2 bg-black/50 text-white rounded-full">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
+            <div className={`fixed inset-0 z-50 md:static md:w-96 md:shrink-0 md:border-l overflow-y-auto animate-slide-in-right ${getDrawerClass()}`}>
+                {/* 3D Pop-out Header */}
+                <div className="relative mb-14">
+                    <div className="h-32 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-b-[2rem] shadow-lg">
+                         {/* Back/Close Button */}
+                        <button onClick={() => setShowContactInfo(false)} className="absolute top-4 left-4 p-2 bg-black/20 text-white rounded-full hover:bg-black/40 transition">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-gradient-to-tr from-cyan-400 to-purple-500 rounded-full blur opacity-75 group-hover:opacity-100 transition"></div>
+                            <img src={partner.avatar} className="relative w-28 h-28 rounded-full border-4 border-gray-900 object-cover shadow-2xl" alt="" />
+                            {partner.status === 'online' && (
+                                <div className="absolute bottom-2 right-2 w-5 h-5 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full"></div>
+                            )}
+                        </div>
+                    </div>
                 </div>
-                <div className="p-6 text-center border-b border-white/10 relative">
-                    <img src={partner.avatar} className="w-24 h-24 rounded-full mx-auto mb-4 object-cover shadow-lg" alt="" />
-                    <h2 className="text-xl font-bold">{partner.name}</h2>
-                    <p className="opacity-60 text-sm mt-1">{partner.bio}</p>
+
+                <div className="px-6 text-center mb-6">
+                    <h2 className={`text-2xl font-bold ${isPastel ? 'text-gray-900' : 'text-white'}`}>{partner.name}</h2>
+                    <p className={`text-sm mt-1 ${isPastel ? 'text-gray-500' : 'text-gray-400'}`}>{partner.bio || "No bio available"}</p>
+                    <p className={`text-xs mt-1 font-medium ${isPastel ? 'text-gray-400' : 'text-gray-500'}`}>{partner.phoneNumber}</p>
                 </div>
                 
-                <div className="p-4 space-y-6">
-                    {/* Actions Grid */}
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                        <button onClick={() => onStartCall(CallType.AUDIO)} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 flex flex-col items-center gap-2">
-                             <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                <div className="px-6 space-y-6 pb-10">
+                    {/* Action Grid - Gradient Buttons */}
+                    <div className="grid grid-cols-3 gap-3 text-center text-xs font-medium">
+                        <button onClick={() => onStartCall(CallType.AUDIO)} className={`p-4 rounded-2xl flex flex-col items-center gap-2 transition hover:-translate-y-1 shadow-lg ${isPastel ? 'bg-gradient-to-br from-white to-gray-50 border border-gray-100' : 'bg-gradient-to-br from-gray-800 to-gray-900 border border-white/5 hover:border-emerald-500/30'}`}>
+                             <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                             </div>
                              <span>Audio</span>
                         </button>
-                        <button onClick={() => onStartCall(CallType.VIDEO)} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 flex flex-col items-center gap-2">
-                             <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        <button onClick={() => onStartCall(CallType.VIDEO)} className={`p-4 rounded-2xl flex flex-col items-center gap-2 transition hover:-translate-y-1 shadow-lg ${isPastel ? 'bg-gradient-to-br from-white to-gray-50 border border-gray-100' : 'bg-gradient-to-br from-gray-800 to-gray-900 border border-white/5 hover:border-purple-500/30'}`}>
+                             <div className="w-10 h-10 rounded-full bg-purple-500/20 text-purple-500 flex items-center justify-center">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                             </div>
                              <span>Video</span>
                         </button>
-                        <button onClick={() => { setIsSearching(true); setShowContactInfo(false); }} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 flex flex-col items-center gap-2">
-                             <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <button onClick={() => { setIsSearching(true); setShowContactInfo(false); }} className={`p-4 rounded-2xl flex flex-col items-center gap-2 transition hover:-translate-y-1 shadow-lg ${isPastel ? 'bg-gradient-to-br from-white to-gray-50 border border-gray-100' : 'bg-gradient-to-br from-gray-800 to-gray-900 border border-white/5 hover:border-blue-500/30'}`}>
+                             <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                             </div>
                              <span>Search</span>
                         </button>
                     </div>
 
+                    {/* Insights (Mini Analytics) */}
+                    <div className={`p-4 rounded-2xl ${isPastel ? 'bg-white shadow-sm' : 'bg-white/5 border border-white/5'}`}>
+                        <h3 className={`text-xs font-bold uppercase tracking-wider mb-4 opacity-60 ${isPastel ? 'text-gray-500' : 'text-gray-400'}`}>Insights</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="text-center">
+                                <div className={`text-lg font-bold ${isPastel ? 'text-gray-900' : 'text-white'}`}>1,240</div>
+                                <div className={`text-[10px] ${isPastel ? 'text-gray-500' : 'text-gray-500'}`}>Messages Sent</div>
+                            </div>
+                             <div className="text-center">
+                                <div className={`text-lg font-bold ${isPastel ? 'text-gray-900' : 'text-white'}`}>42</div>
+                                <div className={`text-[10px] ${isPastel ? 'text-gray-500' : 'text-gray-500'}`}>Photos Shared</div>
+                            </div>
+                             <div className="text-center">
+                                <div className={`text-lg font-bold ${isPastel ? 'text-gray-900' : 'text-white'}`}>5h 23m</div>
+                                <div className={`text-[10px] ${isPastel ? 'text-gray-500' : 'text-gray-500'}`}>Call Duration</div>
+                            </div>
+                             <div className="text-center">
+                                <div className={`text-lg font-bold ${isPastel ? 'text-gray-900' : 'text-white'}`}>Instant</div>
+                                <div className={`text-[10px] ${isPastel ? 'text-gray-500' : 'text-gray-500'}`}>Avg Response</div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* AI Summary */}
-                    <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-900/50 to-purple-900/50 border border-white/10">
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-900/50 to-purple-900/50 border border-white/10 shadow-lg">
                         <div className="flex justify-between items-center mb-2">
-                            <h3 className="font-bold flex items-center gap-2">✨ AI Summary</h3>
-                            <button onClick={handleGenerateSummary} className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded">Generate</button>
+                            <h3 className="font-bold flex items-center gap-2 text-white">✨ AI Summary</h3>
+                            <button onClick={handleGenerateSummary} className="text-xs bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-full transition">Generate</button>
                         </div>
-                        {summaryLoading ? <div className="animate-pulse h-10 bg-white/10 rounded"></div> : <p className="text-xs opacity-80 leading-relaxed">{chatSummary || "Click generate to summarize this chat."}</p>}
+                        {summaryLoading ? <div className="animate-pulse h-10 bg-white/10 rounded"></div> : <p className="text-xs text-white/80 leading-relaxed">{chatSummary || "Tap generate to get a quick summary of your conversation."}</p>}
                     </div>
 
-                    {/* Chat Settings */}
-                    <div className="space-y-4 text-sm">
-                        <div className="flex justify-between items-center p-3 rounded-xl hover:bg-white/5 cursor-pointer" onClick={onToggleEphemeral}>
-                            <span>Disappearing Messages</span>
-                            <span className={chat.ephemeralMode ? "text-emerald-500 font-bold" : "opacity-50"}>{chat.ephemeralMode ? "On" : "Off"}</span>
-                        </div>
-                        {/* Lock Toggle: Type=button and stopPropagation are critical */}
-                        <button 
-                            type="button"
-                            className="flex w-full justify-between items-center p-3 rounded-xl hover:bg-white/5 cursor-pointer text-left" 
-                            onClick={(e) => { 
-                                e.preventDefault(); 
-                                e.stopPropagation(); 
-                                onToggleChatLock(); 
-                            }}
-                        >
-                            <span>Chat Lock</span>
-                            <span className={chat.folder === 'locked' ? "text-emerald-500 font-bold" : "opacity-50"}>{chat.folder === 'locked' ? "Locked" : "Off"}</span>
-                        </button>
-                        <div className="flex justify-between items-center p-3 rounded-xl hover:bg-white/5 cursor-pointer" onClick={onMute}>
-                            <span>Mute Notifications</span>
-                            <span className={chat.muted ? "text-emerald-500 font-bold" : "opacity-50"}>{chat.muted ? "Yes" : "No"}</span>
-                        </div>
-                    </div>
-
-                    {/* Contact Notes */}
+                    {/* Media Gallery (Horizontal Scroll) */}
                     <div>
-                        <h4 className="text-xs uppercase font-bold tracking-wider opacity-60 mb-2">Private Notes</h4>
-                        <textarea 
-                            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm resize-none focus:border-emerald-500 outline-none" 
-                            rows={3} 
-                            placeholder="Add note..."
+                         <div className="flex justify-between items-end mb-3">
+                             <h4 className={`text-xs font-bold uppercase tracking-wider opacity-60 ${isPastel ? 'text-gray-500' : 'text-gray-400'}`}>Media Gallery</h4>
+                             <span className="text-xs text-emerald-500 cursor-pointer" onClick={() => setShowAllMedia(true)}>View All</span>
+                         </div>
+                         <div className="flex space-x-3 overflow-x-auto pb-4 scrollbar-hide snap-x">
+                             {chat.messages.filter(m => m.type === MessageType.IMAGE).length === 0 && <p className="text-xs opacity-50 italic px-2">No media shared yet</p>}
+                             {chat.messages.filter(m => m.type === MessageType.IMAGE).map(m => (
+                                 <img key={m.id} src={m.mediaUrl} className="w-24 h-24 shrink-0 rounded-xl object-cover cursor-pointer hover:opacity-80 transition snap-center shadow-md" onClick={() => onViewImage(m.mediaUrl!)} alt="" />
+                             ))}
+                         </div>
+                    </div>
+
+                    {/* Private Notes */}
+                    <div className={`p-4 rounded-2xl ${isPastel ? 'bg-white shadow-sm' : 'bg-white/5 border border-white/5'}`}>
+                         <h4 className={`text-xs font-bold uppercase tracking-wider opacity-60 mb-2 ${isPastel ? 'text-gray-500' : 'text-gray-400'}`}>Private Notes</h4>
+                         <textarea 
+                            className={`w-full bg-transparent border-b ${isPastel ? 'border-gray-200 text-gray-800' : 'border-white/10 text-white'} py-2 text-sm resize-none focus:border-emerald-500 outline-none transition-colors`} 
+                            rows={2} 
+                            placeholder="Add a note about this contact..."
                             value={contactNote}
                             onChange={(e) => setContactNote(e.target.value)}
                             onBlur={() => onUpdateNote(contactNote)}
                         ></textarea>
                     </div>
 
-                    {/* Media Gallery Preview */}
-                    <div>
-                         <h4 className="text-xs uppercase font-bold tracking-wider opacity-60 mb-2">Media & Docs</h4>
-                         <div className="grid grid-cols-3 gap-2">
-                             {chat.messages.filter(m => m.type === MessageType.IMAGE).slice(0, 3).map(m => (
-                                 <img key={m.id} src={m.mediaUrl} className="w-full h-20 object-cover rounded-lg cursor-pointer" onClick={() => onViewImage(m.mediaUrl!)} alt="" />
-                             ))}
-                             {chat.messages.filter(m => m.type === MessageType.IMAGE).length > 3 && (
-                                 <div className="w-full h-20 bg-white/5 rounded-lg flex items-center justify-center text-xs cursor-pointer">View All</div>
-                             )}
-                         </div>
+                    {/* Settings Group */}
+                    <div className={`rounded-2xl overflow-hidden ${isPastel ? 'bg-white shadow-sm' : 'bg-white/5 border border-white/5'}`}>
+                        <div className={`flex justify-between items-center p-4 border-b ${isPastel ? 'border-gray-100 hover:bg-gray-50' : 'border-white/5 hover:bg-white/5'} cursor-pointer transition`} onClick={onToggleEphemeral}>
+                            <div className="flex items-center gap-3">
+                                <span className="p-2 bg-blue-500/10 text-blue-500 rounded-lg">⏳</span>
+                                <span className={`text-sm font-medium ${isPastel ? 'text-gray-700' : 'text-white'}`}>Disappearing Messages</span>
+                            </div>
+                            <span className={`text-xs ${chat.ephemeralMode ? "text-emerald-500 font-bold" : "opacity-50"}`}>{chat.ephemeralMode ? "On" : "Off"}</span>
+                        </div>
+                        <button 
+                            type="button"
+                            className={`flex w-full justify-between items-center p-4 border-b ${isPastel ? 'border-gray-100 hover:bg-gray-50' : 'border-white/5 hover:bg-white/5'} cursor-pointer transition`} 
+                            onClick={(e) => { 
+                                e.preventDefault(); 
+                                e.stopPropagation(); 
+                                onToggleChatLock(); 
+                            }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className="p-2 bg-purple-500/10 text-purple-500 rounded-lg">🔒</span>
+                                <span className={`text-sm font-medium ${isPastel ? 'text-gray-700' : 'text-white'}`}>Lock Chat</span>
+                            </div>
+                            <span className={`text-xs ${chat.folder === 'locked' ? "text-emerald-500 font-bold" : "opacity-50"}`}>{chat.folder === 'locked' ? "On" : "Off"}</span>
+                        </button>
+                        <div className={`flex justify-between items-center p-4 hover:bg-opacity-50 cursor-pointer transition ${isPastel ? 'hover:bg-gray-50' : 'hover:bg-white/5'}`} onClick={onMute}>
+                            <div className="flex items-center gap-3">
+                                <span className="p-2 bg-orange-500/10 text-orange-500 rounded-lg">🔔</span>
+                                <span className={`text-sm font-medium ${isPastel ? 'text-gray-700' : 'text-white'}`}>Mute Notifications</span>
+                            </div>
+                            <span className={`text-xs ${chat.muted ? "text-emerald-500 font-bold" : "opacity-50"}`}>{chat.muted ? "Yes" : "No"}</span>
+                        </div>
                     </div>
 
                     {/* Danger Zone */}
-                    <div className="pt-4 border-t border-white/10 space-y-2">
-                        <button onClick={() => onArchive()} className="w-full p-3 text-left hover:bg-white/5 rounded-xl flex items-center gap-3">
-                            <span className="opacity-70">Archive Chat</span>
+                    <div className="space-y-2">
+                        <button onClick={() => onArchive()} className={`w-full p-4 rounded-2xl flex items-center gap-3 transition ${isPastel ? 'bg-white hover:bg-gray-50 text-gray-600' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                            <span className="text-sm font-medium">Archive Conversation</span>
                         </button>
-                        <button onClick={() => onBlock(partner.id)} className="w-full p-3 text-left hover:bg-red-500/10 rounded-xl text-red-500 flex items-center gap-3">
-                            <span>{isBlocked ? "Unblock Contact" : "Block Contact"}</span>
-                        </button>
-                        <button onClick={() => onReport(partner.id)} className="w-full p-3 text-left hover:bg-red-500/10 rounded-xl text-red-500 flex items-center gap-3">
-                            <span>Report Contact</span>
+                        <button onClick={() => onBlock(partner.id)} className={`w-full p-4 rounded-2xl flex items-center gap-3 transition ${isPastel ? 'bg-red-50 hover:bg-red-100 text-red-500' : 'bg-red-500/10 hover:bg-red-500/20 text-red-500'}`}>
+                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                             <span className="text-sm font-bold">{isBlocked ? "Unblock Contact" : "Block Contact"}</span>
                         </button>
                     </div>
+
+                    <div className="text-center pb-6">
+                        <button onClick={() => onReport(partner.id)} className="text-xs text-red-500 hover:underline opacity-70">Report {partner.name}</button>
+                    </div>
+                </div>
+            </div>
+        )}
+        
+        {showAllMedia && (
+            <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex flex-col animate-fade-in">
+                <div className="p-4 flex justify-between items-center bg-black/50 backdrop-blur-xl border-b border-white/10">
+                     <h3 className="text-white font-bold text-lg">Media Gallery</h3>
+                     <button onClick={() => setShowAllMedia(false)} className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                     </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 grid grid-cols-3 gap-2 align-start content-start">
+                    {chat.messages.filter(m => m.type === MessageType.IMAGE || m.type === MessageType.VIDEO).map(m => (
+                        <div key={m.id} className="aspect-square relative cursor-pointer group rounded-lg overflow-hidden border border-white/10" onClick={() => onViewImage(m.mediaUrl!)}>
+                            {m.type === MessageType.IMAGE ? (
+                                <img src={m.mediaUrl} className="w-full h-full object-cover transition duration-300 group-hover:scale-110" alt="" />
+                            ) : (
+                                <video src={m.mediaUrl} className="w-full h-full object-cover" />
+                            )}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition duration-300 flex items-center justify-center">
+                                {m.type === MessageType.VIDEO && <div className="w-8 h-8 bg-black/50 rounded-full flex items-center justify-center"><svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>}
+                            </div>
+                        </div>
+                    ))}
+                    {chat.messages.filter(m => m.type === MessageType.IMAGE || m.type === MessageType.VIDEO).length === 0 && (
+                        <div className="col-span-3 text-center text-gray-500 mt-10">No media found</div>
+                    )}
                 </div>
             </div>
         )}
