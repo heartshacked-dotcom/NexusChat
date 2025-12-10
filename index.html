@@ -12,7 +12,8 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
+              sans: ['Inter', 'Poppins', 'Outfit', 'system-ui', 'sans-serif'],
+              display: ['Poppins', 'Inter', 'sans-serif'],
             },
             colors: {
               nexus: {
@@ -42,6 +43,14 @@
                 lavender: '#E9D5FF',
                 mint: '#ccfbf1',
               },
+              // Hybrid (VisionOS Style)
+              hybrid: {
+                bg: '#020617', // Slate 950
+                glass: 'rgba(255, 255, 255, 0.08)',
+                border: 'rgba(255, 255, 255, 0.1)',
+                cyan: '#06b6d4',
+                magenta: '#d946ef',
+              },
               dark: {
                 bg: '#0f172a',    
                 panel: '#1e293b', 
@@ -54,7 +63,10 @@
               'glass-sm': '0 4px 16px 0 rgba(31, 38, 135, 0.05)',
               'neon': '0 0 15px rgba(20, 184, 166, 0.4)',
               'neon-purple': '0 0 15px rgba(124, 58, 237, 0.4)',
+              'neon-cyan': '0 0 20px rgba(6, 182, 212, 0.5)',
               'float': '0 20px 40px -10px rgba(0,0,0,0.15)',
+              'hybrid': '0 10px 30px -5px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05)',
+              'hybrid-active': '0 0 20px rgba(6, 182, 212, 0.2), inset 0 0 0 1px rgba(6, 182, 212, 0.5)',
             },
             keyframes: {
               'pop-in': {
@@ -71,26 +83,48 @@
               },
               'bounce-soft': {
                  '0%, 100%': { transform: 'translateY(0)' },
-                 '50%': { transform: 'translateY(-3px)' },
+                 '50%': { transform: 'translateY(-5px)' },
               },
               'slide-in-right': {
                 '0%': { transform: 'translateX(100%)' },
                 '100%': { transform: 'translateX(0)' },
+              },
+              'gradient-xy': {
+                '0%, 100%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'left center'
+                },
+                '50%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'right center'
+                }
+              },
+              'float': {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-20px)' },
+              },
+              'breathe': {
+                '0%, 100%': { transform: 'scale(1)', opacity: '0.6' },
+                '50%': { transform: 'scale(1.15)', opacity: '0.9' },
               }
             },
             animation: {
               'pop-in': 'pop-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
               'slide-up': 'slide-up 0.4s ease-out',
-              'fade-in': 'fade-in 0.3s ease-out',
-              'bounce-soft': 'bounce-soft 1s infinite',
+              'fade-in': 'fade-in 0.5s ease-out',
+              'bounce-soft': 'bounce-soft 2s infinite ease-in-out',
               'slide-in-right': 'slide-in-right 0.3s ease-out',
+              'gradient-xy': 'gradient-xy 10s ease infinite',
+              'float': 'float 6s ease-in-out infinite',
+              'float-delayed': 'float 7s ease-in-out 3s infinite',
+              'breathe': 'breathe 4s ease-in-out infinite',
             }
           },
         },
       }
     </script>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=Poppins:wght@300;400;500;600;700&display=swap');
       
       html, body {
         height: 100%;
@@ -103,7 +137,12 @@
       }
 
       body {
-        font-family: 'Outfit', sans-serif;
+        font-family: 'Inter', sans-serif;
+      }
+      
+      .theme-hybrid body {
+        font-family: 'Poppins', sans-serif;
+        letter-spacing: -0.015em;
       }
 
       /* Modern Scrollbar */

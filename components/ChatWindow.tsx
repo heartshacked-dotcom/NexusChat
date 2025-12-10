@@ -79,6 +79,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         case 'glass': return "bg-white/10 backdrop-blur-xl border-b border-white/10 shadow-glass";
         case 'amoled': return "bg-black/80 backdrop-blur-lg border-b border-gray-800";
         case 'pastel': return "bg-white/90 backdrop-blur-lg border-b border-gray-100 shadow-sm";
+        case 'hybrid': return "bg-slate-900/60 backdrop-blur-2xl border-b border-white/5 shadow-hybrid";
         default: return "bg-white border-b border-gray-200";
      }
   };
@@ -89,6 +90,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             case 'glass': return "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg shadow-blue-500/20";
             case 'amoled': return "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white shadow-md";
             case 'pastel': return "bg-indigo-500 text-white shadow-md shadow-indigo-200";
+            case 'hybrid': return "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20 border border-white/10";
             default: return "bg-blue-500 text-white";
         }
      } else {
@@ -96,6 +98,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             case 'glass': return "bg-black/40 backdrop-blur-md text-white border border-white/10 shadow-glass-sm";
             case 'amoled': return "bg-gray-900 text-gray-100 border border-gray-800";
             case 'pastel': return "bg-white text-gray-800 shadow-sm border border-gray-100";
+            case 'hybrid': return "bg-gradient-to-r from-purple-900/80 to-fuchsia-900/80 backdrop-blur-md text-white border border-white/5 shadow-hybrid";
             default: return "bg-white text-gray-800 shadow-sm";
         }
      }
@@ -106,6 +109,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           case 'glass': return "bg-black/30 backdrop-blur-xl border border-white/10 text-white placeholder-white/50";
           case 'amoled': return "bg-gray-900 border border-gray-800 text-white placeholder-gray-500";
           case 'pastel': return "bg-white border border-gray-200 text-gray-800 shadow-lg";
+          case 'hybrid': return "bg-white/5 backdrop-blur-xl border border-white/10 text-white placeholder-white/30 shadow-inner";
           default: return "bg-white border border-gray-200";
       }
   };
@@ -115,6 +119,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           case 'glass': return "bg-gray-900/95 backdrop-blur-xl border-l border-white/10 text-white shadow-2xl";
           case 'amoled': return "bg-black/95 border-l border-gray-800 text-white shadow-2xl";
           case 'pastel': return "bg-white/95 border-l border-gray-200 text-gray-800 shadow-2xl";
+          case 'hybrid': return "bg-slate-900/95 backdrop-blur-2xl border-l border-white/5 text-white shadow-2xl";
           default: return "bg-white text-gray-800";
       }
   };
@@ -202,7 +207,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <div className="absolute inset-0 z-0 bg-cover bg-center transition-all duration-700" 
                 style={{ 
                     backgroundImage: `url(${wallpaper})`,
-                    filter: appTheme === 'glass' ? 'blur(0px)' : 'none'
+                    filter: appTheme === 'glass' ? 'blur(0px)' : appTheme === 'hybrid' ? 'blur(10px) brightness(0.7)' : 'none'
                 }}>
             </div>
             
@@ -210,6 +215,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             <div className={`absolute inset-0 z-0 pointer-events-none transition-all duration-700 ${
                 appTheme === 'glass' ? 'bg-black/40' : 
                 appTheme === 'amoled' ? 'bg-black/90' : 
+                appTheme === 'hybrid' ? 'bg-slate-900/50' :
                 'bg-white/60'
             }`}></div>
 

@@ -38,12 +38,13 @@ export const PinModal: React.FC<PinModalProps> = ({ isOpen, onClose, onSuccess, 
   if (!isOpen) return null;
 
   const isPastel = appTheme === 'pastel';
+  const isHybrid = appTheme === 'hybrid';
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-      <div className={`w-full max-w-xs p-6 rounded-3xl shadow-2xl transform transition-all scale-100 ${isPastel ? 'bg-white text-gray-900' : 'bg-gray-900 border border-white/10 text-white'}`}>
+      <div className={`w-full max-w-xs p-6 rounded-3xl shadow-2xl transform transition-all scale-100 ${isPastel ? 'bg-white text-gray-900' : isHybrid ? 'bg-slate-900/90 backdrop-blur-xl border border-white/10 text-white shadow-hybrid' : 'bg-gray-900 border border-white/10 text-white'}`}>
         <div className="text-center mb-6">
-          <div className={`w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center ${isPastel ? 'bg-purple-100 text-purple-600' : 'bg-white/10 text-emerald-400'}`}>
+          <div className={`w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center ${isPastel ? 'bg-purple-100 text-purple-600' : isHybrid ? 'bg-white/5 text-cyan-400 shadow-neon-cyan' : 'bg-white/10 text-emerald-400'}`}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
           </div>
           <h3 className="text-xl font-bold">{title}</h3>

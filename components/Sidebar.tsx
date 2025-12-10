@@ -42,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [settingsView, setSettingsView] = useState<SettingsView>('main');
   const [showArchived, setShowArchived] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [newChatSearch, setNewChatSearch] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [activeFolder, setActiveFolder] = useState<ChatFolder>('all');
   const [isLockedFolderOpen, setIsLockedFolderOpen] = useState(false);
@@ -53,18 +54,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
           case 'glass': return "bg-black/20 backdrop-blur-xl border-r border-white/10";
           case 'amoled': return "bg-black border-r border-gray-900";
           case 'pastel': return "bg-white border-r border-gray-100 shadow-sm";
+          case 'hybrid': return "bg-slate-900/80 backdrop-blur-2xl border-r border-white/5 shadow-2xl";
           default: return "bg-white border-r border-gray-200";
       }
   };
 
   const getTextClass = () => appTheme === 'pastel' ? "text-gray-800" : "text-white";
   const getSubTextClass = () => appTheme === 'pastel' ? "text-gray-500" : "text-gray-400";
-  const getCardHoverClass = () => appTheme === 'pastel' ? "hover:bg-gray-50 shadow-sm" : "hover:bg-white/10";
+  const getCardHoverClass = () => {
+      if (appTheme === 'pastel') return "hover:bg-gray-50 shadow-sm";
+      if (appTheme === 'hybrid') return "hover:bg-white/5 transition-all duration-300";
+      return "hover:bg-white/10";
+  };
   const getActiveCardClass = () => {
       switch(appTheme) {
           case 'glass': return "bg-white/10 shadow-glass border border-white/10";
           case 'amoled': return "bg-gray-900 border border-gray-800";
           case 'pastel': return "bg-indigo-50 border border-indigo-100 shadow-sm";
+          case 'hybrid': return "bg-gradient-to-r from-cyan-900/20 to-blue-900/20 shadow-hybrid-active border-l-2 border-cyan-400";
           default: return "bg-gray-100";
       }
   };
@@ -121,7 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, {} as Record<string, Story[]>);
 
   const SettingsHeader = ({ title, onBack }: { title: string, onBack: () => void }) => (
-    <div className={`flex items-center space-x-4 mb-6 sticky top-0 z-10 py-4 ${appTheme === 'glass' ? 'bg-transparent' : appTheme === 'amoled' ? 'bg-black' : 'bg-white'}`}>
+    <div className={`flex items-center space-x-4 mb-6 sticky top-0 z-10 py-4 ${appTheme === 'glass' ? 'bg-transparent' : appTheme === 'amoled' ? 'bg-black' : appTheme === 'hybrid' ? 'bg-slate-900/80 backdrop-blur-md' : 'bg-white'}`}>
       <button onClick={onBack} className={`p-2 rounded-full transition ${appTheme === 'pastel' ? 'hover:bg-gray-100 text-gray-700' : 'hover:bg-white/10 text-gray-200'}`}>
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
       </button>
@@ -211,6 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <ThemeOption id="glass" name="Neo-Modern Glass" colors="bg-gradient-to-tr from-cyan-500 to-blue-600" />
                         <ThemeOption id="amoled" name="Premium Dark AMOLED" colors="bg-black border border-gray-700" />
                         <ThemeOption id="pastel" name="Minimal Pastel" colors="bg-white border border-gray-200" />
+                        <ThemeOption id="hybrid" name="VisionOS Hybrid" colors="bg-gradient-to-tr from-slate-900 to-cyan-900 border border-white/10" />
                     </div>
 
                     <div className="space-y-3">
@@ -369,19 +377,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <div className={`h-full flex flex-col ${getPanelClass()} transition-colors duration-500 relative`}>
         {/* Profile Card / Header (Dashboard Style) */}
         <div className="p-4 shrink-0">
-            <div className={`p-4 rounded-2xl flex items-center justify-between shadow-lg transition-all duration-300 ${appTheme === 'pastel' ? 'bg-white' : 'bg-gradient-to-r from-indigo-600 to-purple-700 text-white shadow-neon-purple'}`}>
+            <div className={`p-4 rounded-2xl flex items-center justify-between shadow-lg transition-all duration-300 ${appTheme === 'pastel' ? 'bg-white' : appTheme === 'hybrid' ? 'bg-gradient-to-r from-slate-800 to-indigo-900 border border-white/10 shadow-hybrid' : 'bg-gradient-to-r from-indigo-600 to-purple-700 text-white shadow-neon-purple'}`}>
                 <div className="flex items-center space-x-3 cursor-pointer" onClick={() => { onTabChange('settings'); setSettingsView('main'); }}>
                     <div className="relative">
                         <img src={currentUser.avatar} className="w-12 h-12 rounded-full border-2 border-white/50" alt="Me" />
                         <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-indigo-700 rounded-full"></span>
                     </div>
                     <div>
-                        <h3 className="font-bold text-lg leading-tight">{currentUser.name}</h3>
-                        <p className="text-xs opacity-80">{currentUser.phoneNumber}</p>
+                        <h3 className={`font-bold text-lg leading-tight ${appTheme === 'pastel' ? 'text-gray-900' : 'text-white'}`}>{currentUser.name}</h3>
+                        <p className={`text-xs ${appTheme === 'pastel' ? 'text-gray-500' : 'text-gray-300'}`}>{currentUser.phoneNumber}</p>
                     </div>
                 </div>
                 <button onClick={() => { onTabChange('settings'); setSettingsView('main'); }} className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <svg className={`w-5 h-5 ${appTheme === 'pastel' ? 'text-gray-700' : 'text-white'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 </button>
             </div>
         </div>
@@ -393,7 +401,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {(activeTab === 'chats' || activeTab === 'groups') && (
                 <>
                   {/* Animated Search Bar */}
-                  <div className={`mb-4 sticky top-0 z-20 pt-2 pb-2 transition-all ${appTheme === 'glass' ? 'bg-transparent' : appTheme === 'amoled' ? 'bg-black' : 'bg-white'}`}>
+                  <div className={`mb-4 sticky top-0 z-20 pt-2 pb-2 transition-all ${appTheme === 'glass' ? 'bg-transparent' : appTheme === 'amoled' ? 'bg-black' : appTheme === 'hybrid' ? 'bg-slate-900/80 backdrop-blur-md' : 'bg-white'}`}>
                       <div className={`relative group w-full transition-all duration-300 ${isSearchFocused ? 'scale-105' : 'scale-100'}`}>
                           <div className={`absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none`}>
                               <svg className={`w-5 h-5 ${isSearchFocused ? 'text-emerald-500' : getSubTextClass()}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -545,19 +553,57 @@ export const Sidebar: React.FC<SidebarProps> = ({
         
         {/* New Chat Modal (Internal) */}
         {showNewChatModal && (
-            <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-                <div className={`w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl ${appTheme === 'pastel' ? 'bg-white' : 'bg-gray-900 border border-gray-700'}`}>
-                    <div className="p-4 border-b border-gray-700 flex justify-between items-center">
-                        <h3 className={`font-bold text-lg ${getTextClass()}`}>New Chat</h3>
-                        <button onClick={() => setShowNewChatModal(false)} className="p-2"><svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+            <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in">
+                <div className={`w-full sm:max-w-md h-[85vh] sm:h-auto sm:max-h-[80vh] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col transition-all transform scale-100 ${appTheme === 'pastel' ? 'bg-white' : appTheme === 'hybrid' ? 'bg-slate-900/90 border border-white/10 shadow-hybrid' : 'bg-gray-900 border border-gray-700'}`}>
+                    
+                    {/* Modal Header */}
+                    <div className={`p-6 border-b shrink-0 flex justify-between items-center ${appTheme === 'pastel' ? 'border-gray-100' : 'border-white/5'}`}>
+                        <div>
+                            <h3 className={`font-bold text-2xl ${getTextClass()}`}>New Chat</h3>
+                            <p className={`text-sm ${getSubTextClass()}`}>Select a contact to start messaging</p>
+                        </div>
+                        <button onClick={() => setShowNewChatModal(false)} className={`p-2 rounded-full transition ${appTheme === 'pastel' ? 'bg-gray-100 hover:bg-gray-200' : 'bg-white/5 hover:bg-white/10 text-white'}`}>
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
                     </div>
-                    <div className="max-h-[60vh] overflow-y-auto">
-                        {users.map(u => (
-                            <button key={u.id} onClick={() => { onCreateChat(u.id); setShowNewChatModal(false); }} className={`w-full p-4 flex items-center space-x-3 hover:bg-white/5`}>
-                                <img src={u.avatar} className="w-12 h-12 rounded-full" alt="" />
-                                <div className="text-left">
-                                    <h4 className={`font-bold ${getTextClass()}`}>{u.name}</h4>
-                                    <p className={`text-xs ${getSubTextClass()}`}>{u.bio}</p>
+
+                    {/* Floating Search Bar */}
+                    <div className="px-6 py-2 shrink-0">
+                        <div className={`relative group`}>
+                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg className={`w-5 h-5 ${getSubTextClass()}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                             </div>
+                             <input 
+                                type="text" 
+                                placeholder="Search contacts..." 
+                                value={newChatSearch}
+                                onChange={(e) => setNewChatSearch(e.target.value)}
+                                className={`w-full pl-10 pr-4 py-3 rounded-xl outline-none transition-all ${appTheme === 'pastel' ? 'bg-gray-50 text-gray-900 focus:bg-white focus:ring-2 focus:ring-purple-200' : 'bg-black/20 text-white focus:bg-black/40 border border-white/5 focus:border-emerald-500/50'}`}
+                             />
+                        </div>
+                    </div>
+
+                    {/* Contact List */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                        {users.filter(u => u.name.toLowerCase().includes(newChatSearch.toLowerCase())).map(u => (
+                            <button 
+                                key={u.id} 
+                                onClick={() => { onCreateChat(u.id); setShowNewChatModal(false); }} 
+                                className={`w-full p-3 flex items-center space-x-4 rounded-2xl transition-all duration-200 group relative overflow-hidden ${appTheme === 'pastel' ? 'hover:bg-gray-50 active:bg-gray-100' : 'hover:bg-white/5 active:bg-white/10'}`}
+                            >
+                                <div className="relative shrink-0">
+                                    <img src={u.avatar} className={`w-14 h-14 rounded-full object-cover shadow-md group-hover:shadow-lg transition-shadow ${u.status === 'online' ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-transparent' : ''}`} alt="" />
+                                    {u.status === 'online' && <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-black rounded-full shadow-neon"></div>}
+                                </div>
+                                
+                                <div className="flex-1 text-left min-w-0">
+                                    <div className="flex justify-between items-baseline">
+                                        <h4 className={`font-bold text-lg truncate ${getTextClass()}`}>{u.name}</h4>
+                                        <span className={`text-xs font-medium ${u.status === 'online' ? 'text-emerald-500' : 'opacity-40'} ${getTextClass()}`}>
+                                            {u.status === 'online' ? 'Online' : 'Offline'}
+                                        </span>
+                                    </div>
+                                    <p className={`text-sm truncate opacity-70 ${getSubTextClass()}`}>{u.bio}</p>
                                 </div>
                             </button>
                         ))}
@@ -586,17 +632,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 const NavTabs = ({ activeTab, onChange, theme, position }: { activeTab: string, onChange: (t: any) => void, theme: AppTheme, position: 'top' | 'bottom' }) => {
     const isPastel = theme === 'pastel';
     const isGlass = theme === 'glass';
+    const isHybrid = theme === 'hybrid';
     
     const wrapperClass = position === 'bottom' 
         ? "absolute bottom-6 left-6 right-6 z-40" 
         : "px-4 py-2 mb-2";
 
     const containerClass = position === 'bottom'
-        ? (isPastel ? "bg-white/95 shadow-lg border border-gray-100 rounded-[2rem] justify-around" : isGlass ? "bg-black/40 backdrop-blur-xl border border-white/10 shadow-glass rounded-[2rem] justify-around" : "bg-gray-900 border border-gray-800 shadow-2xl rounded-[2rem] justify-around")
+        ? (isPastel ? "bg-white/95 shadow-lg border border-gray-100 rounded-[2rem] justify-around" : isGlass ? "bg-black/40 backdrop-blur-xl border border-white/10 shadow-glass rounded-[2rem] justify-around" : isHybrid ? "bg-slate-900/60 backdrop-blur-2xl border border-white/10 shadow-hybrid rounded-[2rem] justify-around" : "bg-gray-900 border border-gray-800 shadow-2xl rounded-[2rem] justify-around")
         : (isPastel ? "bg-gray-100 p-1 rounded-xl grid grid-cols-4 gap-1" : "bg-white/5 p-1 rounded-xl grid grid-cols-4 gap-1 border border-white/5");
 
     const activeItemClass = position === 'bottom'
-        ? (isPastel ? "text-purple-600 bg-purple-50 shadow-sm -translate-y-1" : "text-white bg-gradient-to-tr from-cyan-500 to-blue-500 shadow-neon -translate-y-1")
+        ? (isPastel ? "text-purple-600 bg-purple-50 shadow-sm -translate-y-1" : isHybrid ? "text-cyan-400 bg-cyan-900/20 border border-cyan-500/30 shadow-neon-cyan -translate-y-1" : "text-white bg-gradient-to-tr from-cyan-500 to-blue-500 shadow-neon -translate-y-1")
         : (isPastel ? "bg-white text-gray-900 shadow-sm" : "bg-white/10 text-white shadow-sm");
 
     const inactiveItemClass = position === 'bottom'

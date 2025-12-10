@@ -18,7 +18,7 @@ export enum MessageStatus {
   FAILED = 'failed'
 }
 
-export type AppTheme = 'glass' | 'amoled' | 'pastel';
+export type AppTheme = 'glass' | 'amoled' | 'pastel' | 'hybrid';
 export type LayoutMode = 'modern' | 'classic';
 export type ChatFolder = 'all' | 'personal' | 'work' | 'locked';
 
