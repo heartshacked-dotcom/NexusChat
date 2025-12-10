@@ -508,35 +508,83 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {activeTab === 'settings' && renderSettings()}
             
             {activeTab === 'status' && (
-                <div className="space-y-6 animate-fade-in">
-                    {/* My Status */}
-                    <div className="flex items-center space-x-4 p-4 rounded-2xl cursor-pointer transition hover:bg-white/5" onClick={() => onAddStory('image', '')}>
-                        <div className="relative">
-                            <img src={currentUser.avatar} className="w-16 h-16 rounded-full border-2 border-gray-500 p-0.5" alt="My Status" />
-                            <div className="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 rounded-full border-2 border-black flex items-center justify-center text-white font-bold text-sm">+</div>
-                        </div>
-                        <div>
-                            <h3 className={`font-bold text-lg ${getTextClass()}`}>My Status</h3>
-                            <p className={`text-sm ${getSubTextClass()}`}>Tap to add status update</p>
+                <div className="space-y-6 animate-fade-in pb-20">
+                    {/* My Status - Glowing & 3D */}
+                    <div 
+                        className={`relative overflow-hidden p-4 rounded-3xl cursor-pointer transition-all duration-300 group transform hover:scale-[1.01] ${
+                            appTheme === 'pastel' ? 'bg-white shadow-lg border border-gray-100' : 
+                            appTheme === 'hybrid' ? 'bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-hybrid' :
+                            'bg-white/5 backdrop-blur-lg border border-white/5 shadow-glass'
+                        }`}
+                        onClick={() => onAddStory('image', '')}
+                    >
+                        {/* Background Glow for My Status */}
+                        <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-[50px] opacity-20 pointer-events-none ${appTheme === 'pastel' ? 'bg-purple-400' : 'bg-emerald-500'}`}></div>
+
+                        <div className="flex items-center space-x-5 relative z-10">
+                            <div className="relative">
+                                <div className={`w-16 h-16 rounded-full p-[2px] ${appTheme === 'pastel' ? 'bg-gray-200' : 'bg-gradient-to-tr from-emerald-500 to-cyan-500 shadow-neon'}`}>
+                                    <img src={currentUser.avatar} className={`w-full h-full rounded-full object-cover border-2 ${appTheme === 'pastel' ? 'border-white' : 'border-gray-900'}`} alt="My Status" />
+                                </div>
+                                <div className="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-white font-bold text-sm shadow-md animate-pulse">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
+                                </div>
+                            </div>
+                            <div className="flex-1">
+                                <h3 className={`font-bold text-lg ${getTextClass()}`}>My Status</h3>
+                                <p className={`text-sm opacity-70 ${getSubTextClass()}`}>Tap to add to your story</p>
+                            </div>
+                            {/* Mini Camera Icon */}
+                            <div className={`p-3 rounded-full ${appTheme === 'pastel' ? 'bg-gray-100 text-gray-600' : 'bg-white/10 text-white'}`}>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            </div>
                         </div>
                     </div>
 
                     {/* Recent Updates */}
                     <div>
                         <h4 className={`text-sm font-bold uppercase tracking-wider mb-4 px-2 opacity-60 ${getTextClass()}`}>Recent Updates</h4>
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             {Object.entries(groupedStories).map(([userId, stories]) => {
                                 const userStories = stories as Story[];
                                 const user = users.find(u => u.id === userId);
+                                const lastStory = userStories[userStories.length - 1];
                                 if (!user || userId === currentUser.id) return null;
+
                                 return (
-                                    <div key={userId} onClick={() => onViewStory(userStories[0].id)} className="flex items-center space-x-4 p-3 rounded-2xl cursor-pointer hover:bg-white/5 transition group">
-                                        <div className="relative p-[3px] rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 group-hover:scale-105 transition-transform duration-300">
-                                            <img src={user.avatar} className="w-14 h-14 rounded-full border-2 border-black" alt={user.name} />
+                                    <div 
+                                        key={userId} 
+                                        onClick={() => onViewStory(userStories[0].id)} 
+                                        className={`group relative flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] ${
+                                            appTheme === 'pastel' ? 'bg-white shadow-sm hover:shadow-md border border-gray-100' : 
+                                            appTheme === 'hybrid' ? 'bg-slate-800/40 backdrop-blur-md border border-white/5 hover:bg-slate-800/60 shadow-lg' :
+                                            'bg-white/5 backdrop-blur-sm border border-white/5 hover:bg-white/10'
+                                        }`}
+                                    >
+                                        {/* Avatar with 3D Ring */}
+                                        <div className="relative mr-4 shrink-0">
+                                            <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 blur-[2px] opacity-80 group-hover:opacity-100 transition duration-500"></div>
+                                            <div className="relative p-[3px] rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 shadow-lg">
+                                                <img src={user.avatar} className={`w-14 h-14 rounded-full object-cover border-2 ${appTheme === 'pastel' ? 'border-white' : 'border-gray-900'}`} alt={user.name} />
+                                            </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <h3 className={`font-bold text-lg ${getTextClass()}`}>{user.name}</h3>
-                                            <p className={`text-sm ${getSubTextClass()}`}>{userStories.length} new stories • {userStories[userStories.length-1].timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className={`font-bold text-lg truncate ${getTextClass()}`}>{user.name}</h3>
+                                            <p className={`text-sm ${getSubTextClass()} truncate`}>
+                                                {userStories.length} new {userStories.length === 1 ? 'story' : 'stories'} • {lastStory.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                            </p>
+                                        </div>
+
+                                        {/* Mini Thumbnail Preview */}
+                                        <div className="shrink-0 w-10 h-14 rounded-lg overflow-hidden border border-white/10 shadow-md transform rotate-3 group-hover:rotate-0 transition duration-300">
+                                            {lastStory.type === 'image' && <img src={lastStory.content} className="w-full h-full object-cover" alt="" />}
+                                            {lastStory.type === 'video' && <video src={lastStory.content} className="w-full h-full object-cover" muted />}
+                                            {lastStory.type === 'text' && (
+                                                <div className="w-full h-full flex items-center justify-center text-[6px] text-white font-bold p-1 text-center" style={{ backgroundColor: lastStory.background || '#6366f1' }}>
+                                                    {lastStory.content}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );
