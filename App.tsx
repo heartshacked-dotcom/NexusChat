@@ -512,40 +512,40 @@ const App: React.FC = () => {
 
   if (authState === 'login') {
     return (
-      <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-black animate-gradient-xy">
+      <div className="fixed inset-0 h-[100dvh] w-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-black animate-gradient-xy touch-none">
         {/* Animated Particles */}
         <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-500/30 rounded-full blur-3xl animate-float pointer-events-none"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-float-delayed pointer-events-none"></div>
 
         {/* 3D Glass Card */}
-        <div className="relative z-10 bg-white/10 backdrop-blur-2xl border border-white/20 p-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] w-full max-w-md text-center transform transition-transform duration-500 hover:scale-[1.02] hover:shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
+        <div className="relative z-10 bg-white/10 backdrop-blur-2xl border border-white/20 p-6 md:p-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] w-[90%] max-w-md text-center transform transition-transform duration-500 hover:scale-[1.02] hover:shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
           
           {/* Breathing Orb Animation */}
-          <div className="mb-10 relative inline-flex items-center justify-center">
-             <div className="w-24 h-24 bg-gradient-to-tr from-cyan-400 to-purple-600 rounded-full animate-breathe blur-xl absolute opacity-60"></div>
-             <div className="w-20 h-20 bg-gradient-to-tr from-cyan-300 to-purple-500 rounded-full relative z-10 shadow-neon flex items-center justify-center border border-white/20">
-                <svg className="w-10 h-10 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          <div className="mb-6 md:mb-10 relative inline-flex items-center justify-center">
+             <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-tr from-cyan-400 to-purple-600 rounded-full animate-breathe blur-xl absolute opacity-60"></div>
+             <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-tr from-cyan-300 to-purple-500 rounded-full relative z-10 shadow-neon flex items-center justify-center border border-white/20">
+                <svg className="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
              </div>
           </div>
 
-          <h1 className="text-5xl font-bold text-white mb-2 font-display tracking-tighter drop-shadow-2xl">NexusChat</h1>
-          <p className="text-gray-200 mb-12 text-lg font-light tracking-wide opacity-80">The future of connection is here.</p>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 font-display tracking-tighter drop-shadow-2xl">NexusChat</h1>
+          <p className="text-gray-200 mb-8 md:mb-12 text-base md:text-lg font-light tracking-wide opacity-80">The future of connection is here.</p>
 
           {/* Micro-bounce Button */}
           <button 
             onClick={() => setAuthState('app')} 
-            className="group relative w-full py-5 rounded-2xl bg-white text-black font-bold text-xl hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] transition-all duration-300 overflow-hidden animate-bounce-soft"
+            className="group relative w-full py-4 md:py-5 rounded-2xl bg-white text-black font-bold text-lg md:text-xl hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] transition-all duration-300 overflow-hidden animate-bounce-soft"
           >
             <span className="relative z-10 flex items-center justify-center gap-3 group-hover:scale-105 transition-transform">
                Enter Experience
-               <svg className="w-6 h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+               <svg className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
             </span>
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-100 via-white to-purple-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </button>
         </div>
         
         {/* Footer Text */}
-        <div className="absolute bottom-8 text-white/30 text-xs font-mono tracking-widest uppercase">
+        <div className="absolute bottom-8 text-white/30 text-[10px] md:text-xs font-mono tracking-widest uppercase">
            Secure • Realtime • Intelligent
         </div>
       </div>
