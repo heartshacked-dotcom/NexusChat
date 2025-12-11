@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Story, User } from '../types';
 
@@ -14,12 +13,21 @@ export const StoryViewer: React.FC<StoryViewerProps> = ({ stories, initialStoryI
   const [currentIndex, setCurrentIndex] = useState(stories.findIndex(s => s.id === initialStoryId));
   const [progress, setProgress] = useState(0);
   const [replyText, setReplyText] = useState('');
+  const [floatingEmojis, setFloatingEmojis] = useState<{ id: number; emoji: string; left: number }[]>([]);
+
+  // Sync index if initialStoryId changes externally
+  useEffect(() => {
+    const idx = stories.findIndex(s => s.id === initialStoryId);
+    if (idx !== -1) setCurrentIndex(idx);
+  }, [initialStoryId, stories]);
 
   const currentStory = stories[currentIndex];
-  const user = users.find(u => u.id === currentStory.userId);
+  const user = users.find(u => u.id === currentStory?.userId);
 
   useEffect(() => {
     setProgress(0);
+    if (!currentStory) return;
+
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
@@ -36,7 +44,7 @@ export const StoryViewer: React.FC<StoryViewerProps> = ({ stories, initialStoryI
     }, 50); // Update every 50ms
 
     return () => clearInterval(interval);
-  }, [currentIndex, stories.length, onClose]);
+  }, [currentIndex, stories.length, onClose, currentStory]);
 
   const handleNext = () => {
     if (currentIndex < stories.length - 1) {
@@ -56,18 +64,57 @@ export const StoryViewer: React.FC<StoryViewerProps> = ({ stories, initialStoryI
     if (replyText.trim()) {
       onReply(currentStory.id, replyText);
       setReplyText('');
-      onClose();
+      // Optional: Show success state or close
     }
+  };
+
+  const handleReaction = (emoji: string) => {
+    // 1. Send the reaction as a reply
+    onReply(currentStory.id, emoji);
+
+    // 2. Trigger floating animation
+    const id = Date.now();
+    const left = Math.random() * 60 + 20; // Random position between 20% and 80%
+    setFloatingEmojis(prev => [...prev, { id, emoji, left }]);
+
+    // 3. Cleanup animation after 2s
+    setTimeout(() => {
+        setFloatingEmojis(prev => prev.filter(e => e.id !== id));
+    }, 2000);
   };
 
   if (!currentStory || !user) return null;
 
   return (
     <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center animate-fade-in">
-      {/* Mobile/Full Screen Container */}
-      <div className="relative w-full h-full md:w-[450px] md:h-[92vh] bg-gray-900 md:rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+      <style>{`
+        @keyframes float-up-fade {
+          0% { transform: translateY(0) scale(0.5); opacity: 0; }
+          20% { opacity: 1; transform: translateY(-50px) scale(1.2); }
+          100% { transform: translateY(-400px) scale(1.5); opacity: 0; }
+        }
+        .animate-reaction {
+          animation: float-up-fade 1.5s ease-out forwards;
+        }
+      `}</style>
+
+      {/* Mobile/Full Screen Container - Width increased for Laptop to md:w-[500px] */}
+      <div className="relative w-full h-full md:w-[500px] md:h-[95vh] bg-gray-900 md:rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-white/10">
         
-        {/* Background Blur Effect for "Text" stories */}
+        {/* Floating Reactions Layer */}
+        <div className="absolute inset-0 z-40 pointer-events-none overflow-hidden">
+            {floatingEmojis.map(anim => (
+                <div 
+                    key={anim.id}
+                    className="absolute bottom-24 text-5xl animate-reaction"
+                    style={{ left: `${anim.left}%` }}
+                >
+                    {anim.emoji}
+                </div>
+            ))}
+        </div>
+
+        {/* Background Blur Effect for "Image" stories to fill gaps */}
         {currentStory.type === 'image' && (
            <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-xl scale-125" style={{ backgroundImage: `url(${currentStory.content})` }}></div>
         )}
@@ -95,16 +142,16 @@ export const StoryViewer: React.FC<StoryViewerProps> = ({ stories, initialStoryI
            </div>
         </div>
 
-        {/* Right Controls (Close + Mock Features) */}
+        {/* Right Controls (Close) */}
         <div className="absolute top-8 right-4 z-30 flex flex-col space-y-4">
             <button onClick={onClose} className="text-white drop-shadow-md p-2 bg-black/20 hover:bg-black/40 backdrop-blur-md rounded-full transition">
                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            {/* Mock Feature Buttons */}
-            <div className="flex flex-col space-y-4 pt-4 opacity-0 md:opacity-100 transition-opacity">
-                <button className="p-2 text-white hover:text-cyan-400 transition" title="Stickers">😊</button>
-                <button className="p-2 text-white hover:text-pink-400 transition" title="Filters">✨</button>
-                <button className="p-2 text-white hover:text-yellow-400 transition" title="Music">🎵</button>
+            {/* Mock Features - Visual only for now */}
+            <div className="flex flex-col space-y-4 pt-4 opacity-0 md:opacity-100 transition-opacity pointer-events-none">
+                <div className="p-2 text-white" title="Stickers">😊</div>
+                <div className="p-2 text-white" title="Filters">✨</div>
+                <div className="p-2 text-white" title="Music">🎵</div>
             </div>
         </div>
 
@@ -127,30 +174,43 @@ export const StoryViewer: React.FC<StoryViewerProps> = ({ stories, initialStoryI
                <div className="w-full h-full flex items-center justify-center p-8 text-center animate-fade-in relative" style={{ backgroundColor: currentStory.background || '#6366f1' }}>
                  {/* Decorative Pattern */}
                  <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                 <p className="text-white text-3xl md:text-4xl font-bold font-serif leading-tight drop-shadow-lg z-10">{currentStory.content}</p>
+                 <p className="text-white text-3xl md:text-4xl font-bold font-serif leading-tight drop-shadow-lg z-10 break-words">{currentStory.content}</p>
                </div>
              )}
         </div>
 
         {/* Bottom Reply Area */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 z-30 bg-gradient-to-t from-black/80 to-transparent pt-12 flex items-center space-x-3">
+        {/* Adjusted padding-bottom (pb-safe) for mobile gestures and increased top padding for gradient visibility */}
+        <div className="absolute bottom-0 left-0 right-0 p-3 pb-8 md:pb-4 z-30 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-24 flex items-center gap-2 md:gap-3">
+          
           <input 
             type="text" 
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendReply()}
             placeholder="Reply to story..." 
-            className="flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-5 py-3 text-white placeholder-white/70 focus:outline-none focus:bg-black/40 focus:border-white/50 transition shadow-lg"
+            // Added min-w-0 and flex-1 to prevent pushing other elements off screen
+            className="flex-1 min-w-0 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-3 text-white placeholder-white/70 focus:outline-none focus:bg-black/40 focus:border-white/50 transition shadow-lg text-sm"
           />
-          <button 
-             onClick={sendReply}
-             className="p-3 bg-white text-emerald-600 rounded-full shadow-lg hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
-             disabled={!replyText.trim()}
-          >
-             <svg className="w-5 h-5 translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9-2-9-18-9 18 9-2zm0 0v-8" /></svg>
-          </button>
-          <button className="p-3 text-2xl hover:scale-125 transition">❤️</button>
-          <button className="p-3 text-2xl hover:scale-125 transition">😂</button>
+          
+          {/* Send Button (only visible if typing) */}
+          {replyText.trim() && (
+            <button 
+               onClick={sendReply}
+               className="p-3 bg-emerald-500 text-white rounded-full shadow-lg hover:bg-emerald-600 transition-transform transform active:scale-95 shrink-0"
+            >
+               <svg className="w-5 h-5 translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9-2-9-18-9 18 9-2zm0 0v-8" /></svg>
+            </button>
+          )}
+
+          {/* Quick Reactions - Functional & Visible */}
+          {!replyText.trim() && (
+            <>
+                <button onClick={() => handleReaction('❤️')} className="p-2 md:p-3 hover:bg-white/10 rounded-full text-2xl md:text-3xl transition active:scale-90 shrink-0 select-none">❤️</button>
+                <button onClick={() => handleReaction('😂')} className="p-2 md:p-3 hover:bg-white/10 rounded-full text-2xl md:text-3xl transition active:scale-90 shrink-0 select-none">😂</button>
+                <button onClick={() => handleReaction('🔥')} className="p-2 md:p-3 hover:bg-white/10 rounded-full text-2xl md:text-3xl transition active:scale-90 shrink-0 select-none">🔥</button>
+            </>
+          )}
         </div>
       </div>
     </div>
