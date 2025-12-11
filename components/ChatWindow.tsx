@@ -70,6 +70,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       setIsSearching(false);
       setSearchTerm('');
       setShowAllMedia(false);
+      setHoveredMessageId(null);
   }, [chat?.id]);
 
   const isPastel = appTheme === 'pastel';
@@ -183,17 +184,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   const renderQuickActions = (msg: Message, isMe: boolean) => (
-      <div className={`absolute -top-10 ${isMe ? 'right-0' : 'left-0'} flex items-center space-x-1 p-1.5 rounded-full shadow-xl z-50 transition-all duration-200 animate-pop-in ${appTheme === 'pastel' ? 'bg-white text-gray-600' : 'bg-gray-800 text-gray-200 border border-white/10'}`}>
-          <button onClick={() => onReact(msg.id, '❤️')} className="hover:scale-125 transition p-1">❤️</button>
-          <button onClick={() => onReact(msg.id, '😂')} className="hover:scale-125 transition p-1">😂</button>
-          <button onClick={() => onReact(msg.id, '👍')} className="hover:scale-125 transition p-1">👍</button>
+      <div 
+        className={`absolute -top-10 ${isMe ? 'right-0' : 'left-0'} flex items-center space-x-1 p-1.5 rounded-full shadow-xl z-50 transition-all duration-200 animate-pop-in ${appTheme === 'pastel' ? 'bg-white text-gray-600' : 'bg-gray-800 text-gray-200 border border-white/10'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+          <button onClick={(e) => { e.stopPropagation(); onReact(msg.id, '❤️'); }} className="hover:scale-125 transition p-1">❤️</button>
+          <button onClick={(e) => { e.stopPropagation(); onReact(msg.id, '😂'); }} className="hover:scale-125 transition p-1">😂</button>
+          <button onClick={(e) => { e.stopPropagation(); onReact(msg.id, '👍'); }} className="hover:scale-125 transition p-1">👍</button>
           <div className="w-px h-4 bg-gray-500/30 mx-1"></div>
-          <button onClick={() => setReplyingTo(msg)} className="hover:text-cyan-400 p-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg></button>
-          <button onClick={() => onPin(msg.id)} className="hover:text-yellow-400 p-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg></button>
+          <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }} className="hover:text-cyan-400 p-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg></button>
+          <button onClick={(e) => { e.stopPropagation(); onPin(msg.id); }} className="hover:text-yellow-400 p-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg></button>
           {isMe && (
               <>
-                <button onClick={() => { setEditingMessageId(msg.id); setInputValue(msg.content); }} className="hover:text-green-400 p-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                <button onClick={() => onDelete(msg.id)} className="hover:text-red-400 p-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                <button onClick={(e) => { e.stopPropagation(); setEditingMessageId(msg.id); setInputValue(msg.content); }} className="hover:text-green-400 p-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                <button onClick={(e) => { e.stopPropagation(); onDelete(msg.id); }} className="hover:text-red-400 p-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
               </>
           )}
       </div>
@@ -315,9 +319,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     return (
                         <div 
                             key={msg.id} 
-                            className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} group relative mb-2`}
+                            className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} group relative mb-2 select-none md:select-text`}
                             onMouseEnter={() => setHoveredMessageId(msg.id)}
                             onMouseLeave={() => setHoveredMessageId(null)}
+                            onClick={(e) => {
+                                // Toggle reactions on mobile tap
+                                e.stopPropagation();
+                                setHoveredMessageId(prev => prev === msg.id ? null : msg.id);
+                            }}
                         >
                             {(isHovered || showTail) && (
                                 <div className={`absolute top-0 ${isMe ? 'right-0' : 'left-0'} w-full h-full pointer-events-none`}>
@@ -335,7 +344,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
                                 <div className={`px-5 py-3 ${getBubbleClass(isMe)} rounded-[26px] ${isMe ? (showTail ? 'rounded-tr-sm' : '') : (showTail ? 'rounded-tl-sm' : '')} relative`}>
                                     {msg.type === MessageType.IMAGE && (
-                                        <img src={msg.mediaUrl} className="rounded-2xl mb-2 max-h-72 w-full object-cover cursor-pointer hover:opacity-90 transition" onClick={() => onViewImage(msg.mediaUrl!)} alt="attachment" />
+                                        <img 
+                                            src={msg.mediaUrl} 
+                                            className="rounded-2xl mb-2 max-h-72 w-full object-cover cursor-pointer hover:opacity-90 transition" 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onViewImage(msg.mediaUrl!);
+                                            }} 
+                                            alt="attachment" 
+                                        />
                                     )}
 
                                     {msg.type === MessageType.POLL && msg.pollOptions && (
@@ -605,7 +622,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         </div>
                         <button 
                             type="button"
-                            className={`flex w-full justify-between items-center p-4 border-b ${isPastel ? 'border-gray-100 hover:bg-gray-50' : 'border-white/5 hover:bg-white/5'} cursor-pointer transition`} 
+                            className={`flex w-full justify-between items-center p-4 border-b ${isPastel ? 'border-gray-100 hover:bg-gray-50' : 'border-white/5 hover:bg-white/10'} cursor-pointer transition`} 
                             onClick={(e) => { 
                                 e.preventDefault(); 
                                 e.stopPropagation(); 
