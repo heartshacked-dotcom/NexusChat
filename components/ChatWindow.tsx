@@ -126,6 +126,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       }
   };
 
+  const isSameDay = (d1: Date, d2: Date) => {
+    return d1.getFullYear() === d2.getFullYear() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate();
+  };
+
+  const formatMessageDate = (date: Date) => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (isSameDay(date, today)) return "Today";
+    if (isSameDay(date, yesterday)) return "Yesterday";
+    return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+  };
+
   if (!chat) return <div className={`flex-1 flex items-center justify-center ${isPastel ? 'text-gray-400' : 'text-gray-600'}`}><p>Select a chat to start messaging</p></div>;
 
   const partner = chat.participants.find(p => p.id !== currentUser.id) || chat.participants[0] || { name: 'User', avatar: '', id: 'unknown', status: 'offline' } as User;
@@ -297,6 +313,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     const isMe = msg.senderId === currentUser.id;
                     const isHovered = hoveredMessageId === msg.id;
                     const showTail = !chat.messages[idx + 1] || chat.messages[idx + 1].senderId !== msg.senderId;
+                    const isNewDay = idx === 0 || !isSameDay(msg.timestamp, chat.messages[idx - 1].timestamp);
                     
                     const repliedMsg = msg.replyToId ? chat.messages.find(m => m.id === msg.replyToId) : null;
                     const repliedSender = repliedMsg ? (repliedMsg.senderId === currentUser.id ? 'You' : (chat.participants.find(p => p.id === repliedMsg.senderId)?.name || 'User')) : 'Unknown';
@@ -307,106 +324,135 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
                     if (msg.isDeleted) {
                         return (
-                            <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                                <div className={`px-4 py-2 rounded-full border ${isPastel ? 'border-gray-200 text-gray-400' : 'border-white/10 text-gray-500'} text-xs italic flex items-center space-x-2`}>
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-                                    <span>Message deleted</span>
+                            <React.Fragment key={msg.id}>
+                                {isNewDay && (
+                                    <div className="flex justify-center my-6">
+                                        <span className={`text-[10px] font-bold px-3 py-1 rounded-full shadow-sm ${isPastel ? 'bg-white/80 text-gray-500' : 'bg-black/30 text-gray-400 border border-white/5 backdrop-blur-sm'}`}>
+                                            {formatMessageDate(msg.timestamp)}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                                    <div className={`px-4 py-2 rounded-full border ${isPastel ? 'border-gray-200 text-gray-400' : 'border-white/10 text-gray-500'} text-xs italic flex items-center space-x-2`}>
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                        <span>Message deleted</span>
+                                    </div>
                                 </div>
-                            </div>
+                            </React.Fragment>
                         );
                     }
 
                     return (
-                        <div 
-                            key={msg.id} 
-                            className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} group relative mb-2 select-none md:select-text`}
-                            onMouseEnter={() => setHoveredMessageId(msg.id)}
-                            onMouseLeave={() => setHoveredMessageId(null)}
-                            onClick={(e) => {
-                                // Toggle reactions on mobile tap
-                                e.stopPropagation();
-                                setHoveredMessageId(prev => prev === msg.id ? null : msg.id);
-                            }}
-                        >
-                            {(isHovered || showTail) && (
-                                <div className={`absolute top-0 ${isMe ? 'right-0' : 'left-0'} w-full h-full pointer-events-none`}>
-                                    {isHovered && <div className="pointer-events-auto">{renderQuickActions(msg, isMe)}</div>}
+                        <React.Fragment key={msg.id}>
+                            {isNewDay && (
+                                <div className="flex justify-center my-6">
+                                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full shadow-sm ${isPastel ? 'bg-white/80 text-gray-500' : 'bg-black/30 text-gray-400 border border-white/5 backdrop-blur-sm'}`}>
+                                        {formatMessageDate(msg.timestamp)}
+                                    </span>
                                 </div>
                             )}
-
-                            <div className={`max-w-[85%] md:max-w-[65%] relative transition-transform duration-200 ${isHovered ? 'scale-[1.01]' : ''}`}>
-                                {repliedMsg && (
-                                    <div className={`text-xs mb-1 px-3 py-1.5 rounded-lg bg-black/10 dark:bg-black/20 border-l-2 border-emerald-400 mb-1 flex flex-col`}>
-                                        <span className={`font-bold ${isMe ? 'text-white/80' : 'text-gray-600 dark:text-gray-400'}`}>{repliedSender}</span>
-                                        <span className="truncate opacity-80">{repliedMsg.type === MessageType.IMAGE ? '📷 Photo' : repliedMsg.content}</span>
+                            <div 
+                                className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} group relative mb-2 select-none md:select-text`}
+                                onMouseEnter={() => setHoveredMessageId(msg.id)}
+                                onMouseLeave={() => setHoveredMessageId(null)}
+                                onClick={(e) => {
+                                    // Toggle reactions on mobile tap
+                                    e.stopPropagation();
+                                    setHoveredMessageId(prev => prev === msg.id ? null : msg.id);
+                                }}
+                            >
+                                {(isHovered || showTail) && (
+                                    <div className={`absolute top-0 ${isMe ? 'right-0' : 'left-0'} w-full h-full pointer-events-none`}>
+                                        {isHovered && <div className="pointer-events-auto">{renderQuickActions(msg, isMe)}</div>}
                                     </div>
                                 )}
 
-                                <div className={`px-5 py-3 ${getBubbleClass(isMe)} rounded-[26px] ${isMe ? (showTail ? 'rounded-tr-sm' : '') : (showTail ? 'rounded-tl-sm' : '')} relative`}>
-                                    {msg.type === MessageType.IMAGE && (
-                                        <img 
-                                            src={msg.mediaUrl} 
-                                            className="rounded-2xl mb-2 max-h-72 w-full object-cover cursor-pointer hover:opacity-90 transition" 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onViewImage(msg.mediaUrl!);
-                                            }} 
-                                            alt="attachment" 
-                                        />
-                                    )}
-
-                                    {msg.type === MessageType.POLL && msg.pollOptions && (
-                                        <div className="min-w-[240px]">
-                                            <p className="font-bold text-lg mb-3">{msg.content}</p>
-                                            <div className="space-y-2">
-                                                {msg.pollOptions.map(opt => {
-                                                    const totalVotes = msg.pollOptions!.reduce((acc, curr) => acc + curr.votes.length, 0);
-                                                    const percentage = totalVotes === 0 ? 0 : Math.round((opt.votes.length / totalVotes) * 100);
-                                                    const hasVoted = opt.votes.includes(currentUser.id);
-                                                    return (
-                                                        <div key={opt.id} onClick={() => onVotePoll(msg.id, opt.id)} className="cursor-pointer">
-                                                            <div className="flex justify-between text-xs mb-1 font-medium opacity-90">
-                                                                <span>{opt.text}</span>
-                                                                <span>{percentage}%</span>
-                                                            </div>
-                                                            <div className={`h-2.5 w-full rounded-full bg-black/20 overflow-hidden`}>
-                                                                <div className={`h-full transition-all duration-500 ${hasVoted ? 'bg-white' : 'bg-white/50'}`} style={{ width: `${percentage}%` }}></div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
+                                <div className={`max-w-[85%] md:max-w-[65%] relative transition-transform duration-200 ${isHovered ? 'scale-[1.01]' : ''}`}>
+                                    {repliedMsg && (
+                                        <div className={`text-xs mb-1 px-3 py-1.5 rounded-lg bg-black/10 dark:bg-black/20 border-l-2 border-emerald-400 mb-1 flex flex-col`}>
+                                            <span className={`font-bold ${isMe ? 'text-white/80' : 'text-gray-600 dark:text-gray-400'}`}>{repliedSender}</span>
+                                            <span className="truncate opacity-80">{repliedMsg.type === MessageType.IMAGE ? '📷 Photo' : repliedMsg.content}</span>
                                         </div>
                                     )}
 
-                                    {(msg.type === MessageType.TEXT || !msg.type) && (
-                                        <p className="text-[15.5px] leading-relaxed whitespace-pre-wrap">
-                                            {searchTerm ? highlightText(msg.content, searchTerm) : msg.content}
-                                        </p>
-                                    )}
+                                    <div className={`px-5 py-3 ${getBubbleClass(isMe)} rounded-[26px] ${isMe ? (showTail ? 'rounded-tr-sm' : '') : (showTail ? 'rounded-tl-sm' : '')} relative`}>
+                                        {msg.type === MessageType.IMAGE && (
+                                            <img 
+                                                src={msg.mediaUrl} 
+                                                className="rounded-2xl mb-2 max-h-72 w-full object-cover cursor-pointer hover:opacity-90 transition" 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onViewImage(msg.mediaUrl!);
+                                                }} 
+                                                alt="attachment" 
+                                            />
+                                        )}
 
-                                    <div className={`text-[10px] mt-1.5 flex items-center justify-end space-x-1.5 ${isMe ? 'text-white/80' : 'opacity-60'}`}>
-                                    {msg.isEdited && <span>(edited)</span>}
-                                    {msg.isStarred && <span>★</span>}
-                                    <span>{msg.timestamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                                    {isMe && (
-                                        <span className={msg.status === MessageStatus.READ ? 'text-white' : ''}>
-                                            {msg.status === MessageStatus.READ ? 
-                                                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> : 
-                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                        {msg.type === MessageType.POLL && msg.pollOptions && (
+                                            <div className="min-w-[240px]">
+                                                <p className="font-bold text-lg mb-3">{msg.content}</p>
+                                                <div className="space-y-2">
+                                                    {msg.pollOptions.map(opt => {
+                                                        const totalVotes = msg.pollOptions!.reduce((acc, curr) => acc + curr.votes.length, 0);
+                                                        const percentage = totalVotes === 0 ? 0 : Math.round((opt.votes.length / totalVotes) * 100);
+                                                        const hasVoted = opt.votes.includes(currentUser.id);
+                                                        return (
+                                                            <div key={opt.id} onClick={() => onVotePoll(msg.id, opt.id)} className="cursor-pointer">
+                                                                <div className="flex justify-between text-xs mb-1 font-medium opacity-90">
+                                                                    <span>{opt.text}</span>
+                                                                    <span>{percentage}%</span>
+                                                                </div>
+                                                                <div className={`h-2.5 w-full rounded-full bg-black/20 overflow-hidden`}>
+                                                                    <div className={`h-full transition-all duration-500 ${hasVoted ? 'bg-white' : 'bg-white/50'}`} style={{ width: `${percentage}%` }}></div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {(msg.type === MessageType.TEXT || !msg.type) && (
+                                            <p className="text-[15.5px] leading-relaxed whitespace-pre-wrap">
+                                                {searchTerm ? highlightText(msg.content, searchTerm) : msg.content}
+                                            </p>
+                                        )}
+
+                                        <div className={`text-[10px] mt-1.5 flex items-center justify-end space-x-1.5 ${isMe ? 'text-white/80' : 'opacity-60'}`}>
+                                        {msg.isEdited && <span>(edited)</span>}
+                                        {msg.isStarred && <span>★</span>}
+                                        <span>{msg.timestamp.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                                        {isMe && (
+                                            <span className={msg.status === MessageStatus.READ ? 'text-blue-200' : ''}>
+                                                {msg.status === MessageStatus.READ ? 
+                                                    // Double Blue Check
+                                                    <div className="flex -space-x-1">
+                                                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                                    </div>
+                                                    : msg.status === MessageStatus.DELIVERED ?
+                                                    // Double Gray Check
+                                                    <div className="flex -space-x-1 opacity-70">
+                                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                                    </div>
+                                                    :
+                                                    // Single Gray Check (Sent)
+                                                    <svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                                 }
-                                        </span>
+                                            </span>
+                                        )}
+                                        </div>
+                                    </div>
+                                    {msg.reactions.length > 0 && (
+                                        <div className={`absolute -bottom-3 ${isMe ? 'right-4' : 'left-4'} flex items-center -space-x-1 bg-white dark:bg-gray-800 rounded-full px-2 py-0.5 shadow-md border border-gray-100 dark:border-gray-700`}>
+                                            {msg.reactions.slice(0, 3).map((r, i) => <span key={i} className="text-xs">{r.emoji}</span>)}
+                                            {msg.reactions.reduce((a, b) => a + b.count, 0) > 1 && <span className="text-[10px] font-bold text-gray-500 pl-1">{msg.reactions.reduce((a, b) => a + b.count, 0)}</span>}
+                                        </div>
                                     )}
-                                    </div>
                                 </div>
-                                {msg.reactions.length > 0 && (
-                                    <div className={`absolute -bottom-3 ${isMe ? 'right-4' : 'left-4'} flex items-center -space-x-1 bg-white dark:bg-gray-800 rounded-full px-2 py-0.5 shadow-md border border-gray-100 dark:border-gray-700`}>
-                                        {msg.reactions.slice(0, 3).map((r, i) => <span key={i} className="text-xs">{r.emoji}</span>)}
-                                        {msg.reactions.reduce((a, b) => a + b.count, 0) > 1 && <span className="text-[10px] font-bold text-gray-500 pl-1">{msg.reactions.reduce((a, b) => a + b.count, 0)}</span>}
-                                    </div>
-                                )}
                             </div>
-                        </div>
+                        </React.Fragment>
                     );
                 })}
                 <div ref={messagesEndRef} />
