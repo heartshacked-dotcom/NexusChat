@@ -13,6 +13,10 @@ type AuthState = 'login' | 'app';
 
 const App: React.FC = () => {
   const [authState, setAuthState] = useState<AuthState>('login');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [registerName, setRegisterName] = useState('');
   
   // Initialize chats from LocalStorage or Default
   const [chats, setChats] = useState<Chat[]>(() => {
@@ -101,7 +105,46 @@ const App: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    if (loginEmail.trim()) {
+        let displayName = "User";
+        if (isRegistering && registerName.trim()) {
+            displayName = registerName;
+        } else {
+            const namePart = loginEmail.split('@')[0];
+            displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+        }
+
+        setCurrentUser(prev => ({
+            ...prev,
+            email: loginEmail,
+            name: displayName,
+            avatar: prev.avatar || `https://ui-avatars.com/api/?name=${displayName}&background=random`
+        }));
+    }
     setAuthState('app');
+  };
+
+  const handleLogout = () => {
+      setAuthState('login');
+      setLoginEmail('');
+      setLoginPassword('');
+      setRegisterName('');
+      setActiveChatId(null);
+  };
+
+  const handleDeleteAccount = () => {
+      showConfirm(
+          "Delete Account",
+          "Are you sure you want to delete your account? All data will be lost permanently.",
+          () => {
+             localStorage.removeItem('nexus_chats');
+             setChats(INITIAL_CHATS);
+             setCurrentUser(CURRENT_USER);
+             handleLogout();
+          },
+          true,
+          "Delete Forever"
+      );
   };
 
   const activeChat = chats.find(c => c.id === activeChatId) || null;
@@ -521,7 +564,7 @@ const App: React.FC = () => {
         <div className="relative z-10 bg-white/10 backdrop-blur-2xl border border-white/20 p-6 md:p-10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] w-[90%] max-w-md text-center transform transition-transform duration-500 hover:scale-[1.02] hover:shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
           
           {/* Breathing Orb Animation */}
-          <div className="mb-6 md:mb-10 relative inline-flex items-center justify-center">
+          <div className="mb-6 md:mb-8 relative inline-flex items-center justify-center">
              <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-tr from-cyan-400 to-purple-600 rounded-full animate-breathe blur-xl absolute opacity-60"></div>
              <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-tr from-cyan-300 to-purple-500 rounded-full relative z-10 shadow-neon flex items-center justify-center border border-white/20">
                 <svg className="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -529,19 +572,58 @@ const App: React.FC = () => {
           </div>
 
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 font-display tracking-tighter drop-shadow-2xl">NexusChat</h1>
-          <p className="text-gray-200 mb-8 md:mb-12 text-base md:text-lg font-light tracking-wide opacity-80">The future of connection is here.</p>
+          <p className="text-gray-200 mb-6 text-base md:text-lg font-light tracking-wide opacity-80">{isRegistering ? "Create your account." : "The future of connection is here."}</p>
 
-          {/* Micro-bounce Button */}
-          <button 
-            onClick={() => setAuthState('app')} 
-            className="group relative w-full py-4 md:py-5 rounded-2xl bg-white text-black font-bold text-lg md:text-xl hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] transition-all duration-300 overflow-hidden animate-bounce-soft"
-          >
-            <span className="relative z-10 flex items-center justify-center gap-3 group-hover:scale-105 transition-transform">
-               Enter Experience
-               <svg className="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-100 via-white to-purple-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          </button>
+          <form onSubmit={handleLogin} className="space-y-4 mb-6">
+            {isRegistering && (
+                <div className="animate-fade-in">
+                    <input 
+                        type="text" 
+                        placeholder="Full Name" 
+                        value={registerName}
+                        onChange={(e) => setRegisterName(e.target.value)}
+                        className="w-full px-5 py-3 rounded-xl bg-white/10 border border-white/10 text-white placeholder-white/50 outline-none focus:bg-white/20 focus:border-cyan-400 transition"
+                    />
+                </div>
+            )}
+            <div>
+                <input 
+                    type="email" 
+                    placeholder="Email Address" 
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    className="w-full px-5 py-3 rounded-xl bg-white/10 border border-white/10 text-white placeholder-white/50 outline-none focus:bg-white/20 focus:border-cyan-400 transition"
+                />
+            </div>
+            <div>
+                <input 
+                    type="password" 
+                    placeholder="Password" 
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    className="w-full px-5 py-3 rounded-xl bg-white/10 border border-white/10 text-white placeholder-white/50 outline-none focus:bg-white/20 focus:border-purple-400 transition"
+                />
+            </div>
+            
+            <button 
+                type="submit"
+                className="group relative w-full py-4 rounded-2xl bg-white text-black font-bold text-lg hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] transition-all duration-300 overflow-hidden animate-bounce-soft"
+            >
+                <span className="relative z-10 flex items-center justify-center gap-3 group-hover:scale-105 transition-transform">
+                {isRegistering ? "Sign Up" : "Log In"}
+                <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-100 via-white to-purple-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </button>
+          </form>
+          
+          <div className="text-white/40 text-sm">
+             {isRegistering ? (
+                 <>Already have an account? <button type="button" onClick={() => setIsRegistering(false)} className="hover:text-white transition underline">Log In</button></>
+             ) : (
+                 <><button type="button" className="hover:text-white transition">Forgot Password?</button> • Don't have an account? <button type="button" onClick={() => setIsRegistering(true)} className="hover:text-white transition underline">Sign Up</button></>
+             )}
+          </div>
         </div>
         
         {/* Footer Text */}
@@ -584,6 +666,8 @@ const App: React.FC = () => {
           onPinChat={handlePinChat}
           onMuteChat={handleMuteChat}
           onArchiveChat={handleArchiveChatById}
+          onLogout={handleLogout}
+          onDeleteAccount={handleDeleteAccount}
         />
       </div>
 

@@ -30,6 +30,8 @@ interface SidebarProps {
   onPinChat: (chatId: string) => void;
   onMuteChat: (chatId: string) => void;
   onArchiveChat: (chatId: string) => void;
+  onLogout: () => void;
+  onDeleteAccount: () => void;
 }
 
 type SettingsView = 'main' | 'account' | 'privacy' | 'chats' | 'notifications' | 'storage' | 'help' | 'app-info' | 'help-center' | 'contact-us' | 'terms';
@@ -39,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentWallpaper, navPosition, onTabChange, onSelectChat, users, onCreateChat,
   onViewStory, onStartCall, onWallpaperChange, onClearChats, onAddStory,
   onToggleReadReceipts, onUnblockUser, onToggleNavPosition, onUpdateSettings, onUpdateProfile,
-  onPinChat, onMuteChat, onArchiveChat
+  onPinChat, onMuteChat, onArchiveChat, onLogout, onDeleteAccount
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [settingsView, setSettingsView] = useState<SettingsView>('main');
@@ -51,6 +53,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isLockedFolderOpen, setIsLockedFolderOpen] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [callFilter, setCallFilter] = useState<'all' | 'missed' | 'incoming'>('all');
+
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const storyInputRef = useRef<HTMLInputElement>(null);
 
   // Sliding Tabs Refs
   const tabsRef = useRef<(HTMLButtonElement | null)[]>([]);
@@ -140,6 +145,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       setActiveFolder('all');
   };
 
+  const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+        const url = URL.createObjectURL(e.target.files[0]);
+        onUpdateProfile({ avatar: url });
+    }
+  };
+
+  const handleStoryFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+        const file = e.target.files[0];
+        const url = URL.createObjectURL(file);
+        const type = file.type.startsWith('video') ? 'video' : 'image';
+        onAddStory(type as any, url);
+    }
+  };
+
   const filteredChats = chats.filter(chat => {
     // Tab Filtering
     if (activeTab === 'groups' && chat.type !== 'group') return false;
@@ -214,12 +235,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="animate-slide-up px-2 pb-20">
                 <SettingsHeader title="Account" onBack={() => setSettingsView('main')} />
                 <div className="flex flex-col items-center mb-8">
-                    <div className="relative group cursor-pointer mb-4">
+                    <div className="relative group cursor-pointer mb-4" onClick={() => avatarInputRef.current?.click()}>
                         <img src={currentUser.avatar} className={`w-28 h-28 rounded-full border-4 object-cover shadow-2xl ${appTheme === 'pastel' ? 'border-white' : 'border-emerald-500'}`} alt="Profile" />
                         <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         </div>
                     </div>
+                    <input type="file" ref={avatarInputRef} hidden accept="image/*" onChange={handleAvatarFile} />
                     <p className={`text-sm ${getSubTextClass()}`}>Tap to change profile photo</p>
                 </div>
 
@@ -231,6 +253,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             value={currentUser.name} 
                             onChange={(e) => onUpdateProfile({ name: e.target.value })}
                             className={`w-full bg-transparent outline-none text-lg font-semibold ${getTextClass()} placeholder-gray-500`}
+                        />
+                    </div>
+
+                    <div className={`p-4 rounded-2xl space-y-1 ${appTheme === 'pastel' ? 'bg-white shadow-sm' : 'bg-white/5 border border-white/5'}`}>
+                        <label className={`text-xs font-bold uppercase tracking-wider opacity-60 ${getTextClass()}`}>Email</label>
+                        <input 
+                            type="text" 
+                            value={currentUser.email} 
+                            readOnly
+                            className={`w-full bg-transparent outline-none text-lg ${getTextClass()} placeholder-gray-500 opacity-60`}
                         />
                     </div>
 
@@ -255,7 +287,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                     
                     <div className="pt-4">
-                         <button className="w-full py-4 rounded-xl border border-red-500/30 text-red-500 font-bold hover:bg-red-500/10 transition">Delete My Account</button>
+                         <button onClick={onDeleteAccount} className="w-full py-4 rounded-xl border border-red-500/30 text-red-500 font-bold hover:bg-red-500/10 transition">Delete My Account</button>
                          <p className={`text-center text-xs mt-3 opacity-50 ${getTextClass()}`}>This action allows you to permanently delete your account and data.</p>
                     </div>
                 </div>
@@ -400,10 +432,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         case 'main': return (
             <div className="px-2 pb-20 animate-fade-in space-y-4">
                  <div className={`p-6 rounded-3xl flex items-center space-x-4 mb-6 cursor-pointer transition transform hover:scale-[1.02] ${appTheme === 'pastel' ? 'bg-white shadow-lg' : 'bg-gradient-to-r from-gray-800 to-gray-900 border border-white/10'}`} onClick={() => setSettingsView('account')}>
-                    <img src={currentUser.avatar} className="w-20 h-20 rounded-full border-4 border-emerald-500 shadow-neon" alt="Profile" />
-                    <div>
-                        <h2 className={`text-2xl font-bold ${getTextClass()}`}>{currentUser.name}</h2>
-                        <p className={`text-sm ${getSubTextClass()}`}>{currentUser.bio}</p>
+                    <img src={currentUser.avatar} className="w-20 h-20 rounded-full border-4 border-emerald-500 shadow-neon object-cover" alt="Profile" />
+                    <div className="min-w-0">
+                        <h2 className={`text-2xl font-bold truncate ${getTextClass()}`}>{currentUser.name}</h2>
+                        <p className={`text-sm truncate ${getSubTextClass()}`}>{currentUser.bio}</p>
                     </div>
                  </div>
                  {[
@@ -419,6 +451,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <svg className={`w-5 h-5 opacity-50 ${getTextClass()}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                     </button>
                  ))}
+                 
+                 <button onClick={onLogout} className="w-full p-4 mt-6 rounded-2xl flex items-center justify-center space-x-2 text-red-500 font-bold border border-red-500/30 hover:bg-red-500/10 transition">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    <span>Log Out</span>
+                 </button>
             </div>
         );
         default: return <div className="p-4"><SettingsHeader title="Settings" onBack={() => setSettingsView('main')} /><p className={getTextClass()}>Section content placeholder...</p></div>;
@@ -430,17 +467,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Profile Card / Header (Dashboard Style) */}
         <div className="p-4 shrink-0 relative z-20">
             <div className={`p-4 rounded-2xl flex items-center justify-between shadow-lg transition-all duration-300 ${appTheme === 'pastel' ? 'bg-white' : appTheme === 'hybrid' ? 'bg-gradient-to-r from-slate-800 to-indigo-900 border border-white/10 shadow-hybrid' : 'bg-gradient-to-r from-indigo-600 to-purple-700 text-white shadow-neon-purple'}`}>
-                <div className="flex items-center space-x-3 cursor-pointer" onClick={() => { onTabChange('settings'); setSettingsView('main'); }}>
-                    <div className="relative">
-                        <img src={currentUser.avatar} className="w-12 h-12 rounded-full border-2 border-white/50" alt="Me" />
+                <div className="flex items-center space-x-3 cursor-pointer overflow-hidden" onClick={() => { onTabChange('settings'); setSettingsView('main'); }}>
+                    <div className="relative shrink-0">
+                        <img src={currentUser.avatar} className="w-12 h-12 rounded-full border-2 border-white/50 object-cover" alt="Me" />
                         <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-indigo-700 rounded-full"></span>
                     </div>
-                    <div>
-                        <h3 className={`font-bold text-lg leading-tight ${appTheme === 'pastel' ? 'text-gray-900' : 'text-white'}`}>{currentUser.name}</h3>
-                        <p className={`text-xs ${appTheme === 'pastel' ? 'text-gray-500' : 'text-gray-300'}`}>{currentUser.phoneNumber}</p>
+                    <div className="min-w-0">
+                        <h3 className={`font-bold text-lg leading-tight truncate ${appTheme === 'pastel' ? 'text-gray-900' : 'text-white'}`}>{currentUser.name}</h3>
+                        <p className={`text-xs truncate ${appTheme === 'pastel' ? 'text-gray-500' : 'text-gray-300'}`}>{currentUser.phoneNumber}</p>
                     </div>
                 </div>
-                <button onClick={() => { onTabChange('settings'); setSettingsView('main'); }} className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition">
+                <button onClick={() => { onTabChange('settings'); setSettingsView('main'); }} className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition shrink-0">
                     <svg className={`w-5 h-5 ${appTheme === 'pastel' ? 'text-gray-700' : 'text-white'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 </button>
             </div>
@@ -609,7 +646,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 appTheme === 'hybrid' ? 'bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-hybrid' :
                                 'bg-white/5 backdrop-blur-lg border border-white/5 shadow-glass'
                             }`}
-                            onClick={() => onAddStory('image', '')}
+                            onClick={() => storyInputRef.current?.click()}
                         >
                             {/* Background Glow for My Status */}
                             <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-[50px] opacity-20 pointer-events-none ${appTheme === 'pastel' ? 'bg-purple-400' : 'bg-emerald-500'}`}></div>
@@ -633,6 +670,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 </div>
                             </div>
                         </div>
+                        <input type="file" ref={storyInputRef} hidden accept="image/*,video/*" onChange={handleStoryFile} />
 
                         {/* Recent Updates */}
                         <div>
