@@ -136,3 +136,29 @@ export interface CallLog {
   timestamp: Date;
   duration?: number; 
 }
+
+// --- Backend DTO Mappers ---
+
+export interface DBMessage {
+  id: string;
+  chat_id: string;
+  sender_id: string;
+  content: string;
+  type: string;
+  media_url?: string;
+  reply_to_id?: string;
+  status: string;
+  created_at: string;
+}
+
+export const mapDBMessageToMessage = (dbMsg: DBMessage): Message => ({
+  id: dbMsg.id,
+  senderId: dbMsg.sender_id,
+  content: dbMsg.content || '',
+  type: dbMsg.type as MessageType,
+  timestamp: new Date(dbMsg.created_at),
+  status: dbMsg.status as MessageStatus,
+  mediaUrl: dbMsg.media_url,
+  replyToId: dbMsg.reply_to_id,
+  reactions: [] // Reactions would need a separate table/join
+});
